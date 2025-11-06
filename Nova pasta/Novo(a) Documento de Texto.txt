@@ -1,0 +1,323 @@
+Respire fundo.
+Criei uma implementação simples e reutilizável de boids compatível com o estilo do seu projeto (C++14, OpenGL/GLUT, herdando de Object). Há duas classes:
+•	Boid — comportamento individual (separation, alignment, cohesion), update() e draw().
+•	Flock — gerencia um vetor de Boid, inicialização aleatória, atualização e desenho em lote.
+Arquivos gerados: Boid.h, Boid.cpp, Flock.h, Flock.cpp.
+Uso rápido:
+•	Instancie um Flock em main.cpp (por ex. static Flock flock;), inicialize (flock.init(50);), e chame flock.update(dt); flock.draw(); dentro do display() (onde dt pode ser 1.0/60.0 ou calculado a partir de glutGet(GLUT_ELAPSED_TIME)).
+Código:
+
+#pragma once
+
+#include "Object.h"
+#include <vector>
+
+class Boid : public Object
+{
+public:
+	Boid();
+	Boid(const GLdouble* pos);
+
+	// Atualiza o boid com base nos vizinhos e dt (segundos)
+	void update(const std::vector<Boid*>& neighbors, GLdouble dt);
+
+	// Desenha o boid (pequeno cone orientado pela velocidade)
+	void draw() override;
+
+private:
+	// Comportamentos básicos
+	void applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt);
+	void flock(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz);
+	void separate(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz);
+	void align(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz);
+
+	// Helpers vetoriais
+	static void vecAdd(GLdouble a[3], const GLdouble b[3]);
+	static void vecScale(GLdouble v[3], GLdouble s);
+	static GLdouble vecLength(const GLdouble v[3]);
+	static void vecNormalize(GLdouble v[3]);
+	static void vecSet(GLdouble v[3], GLdouble x, GLdouble y, GLdouble z);
+	static void vecLimit(GLdouble v[3], GLdouble max);
+
+	// parâmetros
+	GLdouble maxSpeed;
+	GLdouble maxForce;
+	GLdouble neighRadius;
+	GLdouble separationRadius;
+
+	// pesos
+	GLdouble weightCohesion;
+	GLdouble weightSeparation;
+	GLdouble weightAlignment;
+};
+
+#include "Boid.h"
+#include <GL/glut.h>
+#include <cmath>
+
+Boid::Boid()
+	: maxSpeed(8.0), maxForce(4.0),
+	  neighRadius(10.0), separationRadius(3.0),
+	  weightCohesion(1.0), weightSeparation(1.5), weightAlignment(1.0)
+{
+	GLdouble p[3] = { 0.0, 0.0, 0.0 };
+	setPosition(p[0], p[1], p[2]);
+	setVelocity(0.0, 0.0, 0.0);
+	setSize(0.5, 0.5, 0.5);
+}
+
+Boid::Boid(const GLdouble* pos)
+	: Boid()
+{
+	setPosition(pos[0], pos[1], pos[2]);
+}
+
+// Helpers
+void Boid::vecAdd(GLdouble a[3], const GLdouble b[3]) { a[0]+=b[0]; a[1]+=b[1]; a[2]+=b[2]; }
+void Boid::vecScale(GLdouble v[3], GLdouble s) { v[0]*=s; v[1]*=s; v[2]*=s; }
+GLdouble Boid::vecLength(const GLdouble v[3]) { return std::sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); }
+void Boid::vecNormalize(GLdouble v[3]) { GLdouble l = vecLength(v); if (l>1e-9) { v[0]/=l; v[1]/=l; v[2]/=l; } }
+void Boid::vecSet(GLdouble v[3], GLdouble x, GLdouble y, GLdouble z) { v[0]=x; v[1]=y; v[2]=z; }
+void Boid::vecLimit(GLdouble v[3], GLdouble max) { GLdouble l = vecLength(v); if (l>max && l>1e-9) { vecScale(v, max / l); } }
+
+void Boid::update(const std::vector<Boid*>& neighbors, GLdouble dt)
+{
+	applyBehaviors(neighbors, dt);
+
+	// Atualiza posição pela velocidade integrada por dt
+	const GLdouble* vel = getVelocity();
+	const GLdouble* pos = getPosition();
+
+	GLdouble newPos[3];
+	newPos[0] = pos[0] + vel[0] * dt;
+	newPos[1] = pos[1] + vel[1] * dt;
+	newPos[2] = pos[2] + vel[2] * dt;
+	setPosition(newPos[0], newPos[1], newPos[2]);
+}
+
+void Boid::applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt)
+{
+	GLdouble cohesion[3] = {0.0,0.0,0.0};
+	GLdouble separation[3] = {0.0,0.0,0.0};
+	GLdouble alignment[3] = {0.0,0.0,0.0};
+
+	flock(neighbors, cohesion[0], cohesion[1], cohesion[2]);
+	separate(neighbors, separation[0], separation[1], separation[2]);
+	align(neighbors, alignment[0], alignment[1], alignment[2]);
+
+	// Pondera forças
+	cohesion[0] *= weightCohesion; cohesion[1] *= weightCohesion; cohesion[2] *= weightCohesion;
+	separation[0] *= weightSeparation; separation[1] *= weightSeparation; separation[2] *= weightSeparation;
+	alignment[0] *= weightAlignment; alignment[1] *= weightAlignment; alignment[2] *= weightAlignment;
+
+	// Soma forças e aplica limit
+	GLdouble steer[3] = {0.0,0.0,0.0};
+	vecAdd(steer, cohesion);
+	vecAdd(steer, separation);
+	vecAdd(steer, alignment);
+	vecLimit(steer, maxForce);
+
+	// Atualiza velocidade
+	const GLdouble* vel = getVelocity();
+	GLdouble newVel[3] = { vel[0] + steer[0] * dt, vel[1] + steer[1] * dt, vel[2] + steer[2] * dt };
+	// limita velocidade
+	vecLimit(newVel, maxSpeed);
+	setVelocity(newVel[0], newVel[1], newVel[2]);
+}
+
+// Cohesion: move em direção ao centro dos vizinhos
+void Boid::flock(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz)
+{
+	GLdouble pos[3];
+	const GLdouble* me = getPosition();
+	vecSet(pos, me[0], me[1], me[2]);
+
+	GLdouble center[3] = {0.0,0.0,0.0};
+	int count = 0;
+	for (auto b : neighbors)
+	{
+		if (b == this) continue;
+		const GLdouble* bp = b->getPosition();
+		GLdouble d = std::sqrt(std::pow(bp[0]-pos[0],2)+std::pow(bp[1]-pos[1],2)+std::pow(bp[2]-pos[2],2));
+		if (d > 0 && d < neighRadius) {
+			center[0] += bp[0]; center[1] += bp[1]; center[2] += bp[2];
+			++count;
+		}
+	}
+	if (count == 0) { rx = ry = rz = 0.0; return; }
+	center[0] /= count; center[1] /= count; center[2] /= count;
+
+	// desired = center - position
+	GLdouble desired[3] = { center[0]-pos[0], center[1]-pos[1], center[2]-pos[2] };
+	vecNormalize(desired);
+	desired[0] *= maxSpeed; desired[1] *= maxSpeed; desired[2] *= maxSpeed;
+
+	const GLdouble* vel = getVelocity();
+	GLdouble steer[3] = { desired[0]-vel[0], desired[1]-vel[1], desired[2]-vel[2] };
+	vecLimit(steer, maxForce);
+	rx = steer[0]; ry = steer[1]; rz = steer[2];
+}
+
+// Separation: afasta-se de vizinhos muito próximos
+void Boid::separate(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz)
+{
+	GLdouble pos[3];
+	const GLdouble* me = getPosition();
+	vecSet(pos, me[0], me[1], me[2]);
+
+	GLdouble steer[3] = {0.0,0.0,0.0};
+	int count = 0;
+	for (auto b : neighbors)
+	{
+		if (b == this) continue;
+		const GLdouble* bp = b->getPosition();
+		GLdouble dx = pos[0]-bp[0], dy = pos[1]-bp[1], dz = pos[2]-bp[2];
+		GLdouble d = std::sqrt(dx*dx+dy*dy+dz*dz);
+		if (d > 0 && d < separationRadius)
+		{
+			// inversely proportional
+			steer[0] += dx / d;
+			steer[1] += dy / d;
+			steer[2] += dz / d;
+			++count;
+		}
+	}
+	if (count == 0) { rx = ry = rz = 0.0; return; }
+	steer[0] /= count; steer[1] /= count; steer[2] /= count;
+	vecNormalize(steer);
+	steer[0] *= maxSpeed; steer[1] *= maxSpeed; steer[2] *= maxSpeed;
+
+	const GLdouble* vel = getVelocity();
+	GLdouble res[3] = { steer[0]-vel[0], steer[1]-vel[1], steer[2]-vel[2] };
+	vecLimit(res, maxForce);
+	rx = res[0]; ry = res[1]; rz = res[2];
+}
+
+// Alignment: combina direção com a média dos vizinhos
+void Boid::align(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz)
+{
+	GLdouble avg[3] = {0.0,0.0,0.0};
+	int count = 0;
+	for (auto b : neighbors)
+	{
+		if (b == this) continue;
+		const GLdouble* bp = b->getPosition();
+		const GLdouble* bv = b->getVelocity();
+		GLdouble d = std::sqrt(std::pow(bp[0]-getPosition()[0],2)+std::pow(bp[1]-getPosition()[1],2)+std::pow(bp[2]-getPosition()[2],2));
+		if (d > 0 && d < neighRadius)
+		{
+			avg[0] += bv[0]; avg[1] += bv[1]; avg[2] += bv[2];
+			++count;
+		}
+	}
+	if (count == 0) { rx = ry = rz = 0.0; return; }
+	avg[0] /= count; avg[1] /= count; avg[2] /= count;
+	vecNormalize(avg);
+	avg[0] *= maxSpeed; avg[1] *= maxSpeed; avg[2] *= maxSpeed;
+
+	const GLdouble* vel = getVelocity();
+	GLdouble steer[3] = { avg[0]-vel[0], avg[1]-vel[1], avg[2]-vel[2] };
+	vecLimit(steer, maxForce);
+	rx = steer[0]; ry = steer[1]; rz = steer[2];
+}
+
+void Boid::draw()
+{
+	const GLdouble* pos = getPosition();
+	const GLdouble* vel = getVelocity();
+	GLdouble dir[3] = { vel[0], vel[1], vel[2] };
+	GLdouble len = vecLength(dir);
+	glPushMatrix();
+	glTranslated(pos[0], pos[1], pos[2]);
+	if (len > 1e-6)
+	{
+		// compute yaw and pitch to orient a cone along velocity
+		GLdouble yaw = atan2(dir[0], dir[2]) * 180.0 / M_PI;
+		GLdouble pitch = asin(dir[1] / len) * 180.0 / M_PI;
+		glRotated(yaw, 0.0, 1.0, 0.0);
+		glRotated(-pitch, 1.0, 0.0, 0.0);
+	}
+	glColor3d(0.8, 0.2, 0.2);
+	glutSolidCone(0.3, 0.8, 8, 2);
+	glColor3d(0.0, 0.0, 0.0);
+	glutWireCone(0.3, 0.8, 8, 2);
+	glPopMatrix();
+}
+
+#pragma once
+
+#include "Boid.h"
+#include <vector>
+
+class Flock
+{
+public:
+	Flock();
+	~Flock();
+
+	// Inicializa n boids em posições aleatórias dentro de um cubo centered at origin
+	void init(int n, GLdouble spread = 50.0);
+
+	// Atualiza todos os boids; dt em segundos
+	void update(GLdouble dt);
+
+	// Desenha todos os boids
+	void draw();
+
+	// Acesso (por exemplo para depuração)
+	const std::vector<Boid>& getBoids() const { return boids; }
+
+private:
+	std::vector<Boid> boids;
+};
+
+#include "Flock.h"
+#include <random>
+
+Flock::Flock() {}
+Flock::~Flock() {}
+
+void Flock::init(int n, GLdouble spread)
+{
+	boids.clear();
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<GLdouble> dist(-spread, spread);
+	for (int i = 0; i < n; ++i)
+	{
+		GLdouble p[3] = { dist(gen), dist(gen)*0.2, dist(gen) }; // leve offset Y menor
+		boids.emplace_back(p);
+		// set small random initial velocity
+		std::uniform_real_distribution<GLdouble> vdist(-1.0, 1.0);
+		boids.back().setVelocity(vdist(gen), vdist(gen), vdist(gen));
+		boids.back().setSize(0.5, 0.5, 0.5);
+	}
+}
+
+void Flock::update(GLdouble dt)
+{
+	// build pointer list once
+	std::vector<Boid*> ptrs;
+	ptrs.reserve(boids.size());
+	for (auto& b : boids) ptrs.push_back(&b);
+
+	for (auto& b : boids)
+	{
+		b.update(ptrs, dt);
+	}
+}
+
+void Flock::draw()
+{
+	for (auto& b : boids) b.draw();
+}
+
+O que foi adicionado / recomendações rápidas
+•	Arquivos: Boid.h, Boid.cpp, Flock.h, Flock.cpp.
+•	Integração: crie uma instância global/estática de Flock em main.cpp ou em glut_callback.h, inicialize com flock.init(50);, e dentro de display() chame flock.update(dt); flock.draw();.
+•	Ajuste parâmetros (peso, raio, velocidade) nas classes conforme desejado.
+•	Se preferir, posso:
+•	Gerar patch aplicável diretamente ao seu repositório.
+•	Adaptar desenho para usar esferas/linhas em vez de cones (mais simples).
+•	Adicionar colisão com o Floor ou evitar sair de uma área (wrap-around).
+Deseja que eu aplique os arquivos ao repositório (criar os arquivos no projeto) ou adapte a integração no seu display() já aberto?

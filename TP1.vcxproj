@@ -126,10 +126,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Boid.cpp" />
+    <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Flock.cpp" />
+    <ClCompile Include="Floor.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Object.cpp" />
+    <ClCompile Include="Tower.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Boid.h" />
+    <ClInclude Include="Camera.h" />
+    <ClInclude Include="Flock.h" />
+    <ClInclude Include="Floor.h" />
     <ClInclude Include="glut_callback.h" />
+    <ClInclude Include="Object.h" />
+    <ClInclude Include="Tower.h" />
+    <ClInclude Include="vecFunctions.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

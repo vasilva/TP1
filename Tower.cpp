@@ -28,17 +28,10 @@ void Tower::draw()
 	glRotated(rotation.y, 0.0, 1.0, 0.0);
 	glRotated(rotation.z, 0.0, 0.0, 1.0);
 	glutSolidCone(size.x, size.y, 20, 5);
-	glPopMatrix();
 
+	// Draw wireframe
 	color = Color::Black;
 	glColor3d(color.x, color.y, color.z); // Black
-	
-	// Draw wireframe
-	glPushMatrix();
-	glTranslated(pos.x, pos.y, pos.z);
-	glRotated(rotation.x, 1.0, 0.0, 0.0);
-	glRotated(rotation.y, 0.0, 1.0, 0.0);
-	glRotated(rotation.z, 0.0, 0.0, 1.0);
 	glutWireCone(size.x, size.y, 30, 1);
 	glPopMatrix();
 }

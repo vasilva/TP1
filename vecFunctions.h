@@ -1,5 +1,4 @@
 #pragma once
-
 #include <GL/glut.h>
 #include <cmath>
 
@@ -118,16 +117,50 @@ inline void limit(Vec3& v, GLdouble max)
 	}
 }
 
+// Common colors
 namespace Color
 {
+	// Grayscale
 	static const Vec3 Black(0.0, 0.0, 0.0);
 	static const Vec3 White(1.0, 1.0, 1.0);
+	static const Vec3 Gray(0.5, 0.5, 0.5);
+	static const Vec3 DarkGray(0.25, 0.25, 0.25);
+	static const Vec3 LightGray(0.75, 0.75, 0.75);
+	// Reds
 	static const Vec3 Red(1.0, 0.0, 0.0);
+	static const Vec3 DarkRed(0.5, 0.0, 0.0);
+	static const Vec3 LightRed(1.0, 0.5, 0.5);
+	// Greens
 	static const Vec3 Green(0.0, 1.0, 0.0);
+	static const Vec3 DarkGreen(0.0, 0.5, 0.0);
+	static const Vec3 LightGreen(0.5, 1.0, 0.5);
+	// Blues
 	static const Vec3 Blue(0.0, 0.0, 1.0);
+	static const Vec3 DarkBlue(0.0, 0.0, 0.5);
+	static const Vec3 LightBlue(0.5, 0.5, 1.0);
+	// Yellows
 	static const Vec3 Yellow(1.0, 1.0, 0.0);
-	static const Vec3 LightYellow(1.0, 1.0, 0.88);
-	static const Vec3 LightBlue(0.68, 0.85, 0.9);
-	static const Vec3 LightPink(1.0, 0.71, 0.76);
-	static const Vec3 LightGreen(0.56, 0.93, 0.56);
+	static const Vec3 DarkYellow(0.5, 0.5, 0.0);
+	static const Vec3 LightYellow(1.0, 1.0, 0.5);
+	// Cyans
+	static const Vec3 Cyan(0.0, 1.0, 1.0);
+	static const Vec3 DarkCyan(0.0, 0.5, 0.5);
+	static const Vec3 LightCyan(0.5, 1.0, 1.0);
+	// Magentas
+	static const Vec3 Magenta(1.0, 0.0, 1.0);
+	static const Vec3 DarkMagenta(0.5, 0.0, 0.5);
+	static const Vec3 LightMagenta(1.0, 0.5, 1.0);
+	// Oranges
+	static const Vec3 Orange(1.0, 0.5, 0.0);
+	static const Vec3 DarkOrange(0.5, 0.25, 0.0);
+	static const Vec3 LightOrange(1.0, 0.75, 0.5);
+	// Purples
+	static const Vec3 Purple(0.5, 0.0, 0.5);
+	static const Vec3 DarkPurple(0.25, 0.0, 0.25);
+	static const Vec3 LightPurple(0.75, 0.5, 0.75);
+	// Others
+	static const Vec3 Brown(0.6, 0.4, 0.2);
+	static const Vec3 Pink(1.0, 0.75, 0.8);
+	static const Vec3 Lime(0.75, 1.0, 0.0);
+	static const Vec3 Olive(0.5, 0.5, 0.0);
 }

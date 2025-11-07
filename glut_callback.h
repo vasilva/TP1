@@ -1,51 +1,148 @@
 #pragma once
-
 #include <GL/glut.h>
-#include <iostream>
-
 #include "Tower.h"
 #include "Floor.h"
+#include "Flock.h"
+#include "ControlledBoid.h"
 #include "Camera.h"
 #include "vecFunctions.h"
 
-static Camera* s_camera = nullptr;
-static int s_lastX = 0, s_lastY = 0;
-static bool s_dragging = false;
+// Cameras
+static Camera* sFollowCamera = nullptr;
+static Camera* sFixedCamera = nullptr;
+static Camera* sSideCamera = nullptr;
+static GLdouble sCameraDistance = 15.0;
+
+// Zoom limits / step
+static const GLdouble CAMERA_MIN_DISTANCE = 5.0;
+static const GLdouble CAMERA_MAX_DISTANCE = 100.0;
+static const GLdouble CAMERA_ZOOM_STEP = 1.5;
+
+// Current camera type
+enum CameraType { FOLLOW_CAMERA = 1, FIXED_CAMERA, SIDE_CAMERA };
+static CameraType sCurrentCamera = FOLLOW_CAMERA;
+
+// Scene objects
+static ControlledBoid* sControlledBoid = nullptr;
+static Flock* sFlock = nullptr;
+static Floor* sFloor = nullptr;
+static Tower* sTower = nullptr;
+
+// Time tracking
+static GLdouble sLastTime = 0.0;
 
 /* GLUT callback Handlers */
 
 static void display(void)
 {
-	const auto time = glutGet(GLUT_ELAPSED_TIME) / 1000.0;
+	// Compute time
+	const GLdouble time = glutGet(GLUT_ELAPSED_TIME) / 1000.0;
+	GLdouble dt;
+	if (sLastTime <= 0.0)
+		dt = 1.0 / 60.0;
+	else
+		dt = time - sLastTime;
+
+	sLastTime = time;
 
 	// Clear the color and depth buffers
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	s_camera->applyView();
+	// Controlled boid
+	if (!sControlledBoid)
+	{
+		// allocate persistent objects outside; but header uses static pointers — construct once
+		static ControlledBoid controlledBoidInstance;
+		sControlledBoid = &controlledBoidInstance;
+		sControlledBoid->setPosition(Vec3(20.0, 10.0, 0.0));
+	}
 
-	// Draw a floor and a cone
 	// Floor
-	Floor floor;
-	floor.setPosition(Zero);
-	floor.setSize(200.0, 0.5, 200.0);
-	floor.setRotation(UnitX * 20.0);
-	floor.draw();
+	if (!sFloor)
+	{
+		static Floor floorInstance;
+		sFloor = &floorInstance;
+		sFloor->setPosition(Zero);
+		sFloor->setSize(200.0, 1.0, 200.0);
+		sFloor->setRotation(UnitX);
+	}
 
-	// Cone (Tower)
-	Tower tower;
-	tower.setPosition(UnitY * 0.1);
-	tower.setSize(5.0, 40.0, 5.0);
-	tower.setRotation(UnitX * -70.0);
-	tower.draw();
+	// Tower
+	if (!sTower)
+	{
+		static Tower towerInstance;
+		sTower = &towerInstance;
+		sTower->setPosition(UnitY * 0.1);
+		sTower->setSize(5.0, 40.0, 5.0);
+		sTower->setRotation(UnitX * -90.0);
+	}
 
-	// Camera target visualization
-	auto color = Color::Yellow;
-	glColor3d(color.x, color.y, color.z); // Yellow color
-	auto target = s_camera->getTarget();
-	glPushMatrix();
-	glTranslated(target.x, target.y, target.z);
-	glutSolidSphere(0.2, 20, 20);
-	glPopMatrix();
+	// Flock of boids
+	if (!sFlock)
+	{
+		static Flock flockInstance;
+		sFlock = &flockInstance;
+		sFlock->init(50, 60.0);
+	}
+
+	// Update boids
+	sControlledBoid->update(dt);
+	sFlock->update(dt);
+
+	Vec3 cbPos = sControlledBoid->getPosition();
+	Vec3 followCamPos, offset, forwardDir, rightCamPos, right;
+	GLdouble yawRad, height;
+	switch (sCurrentCamera)
+	{
+	case FOLLOW_CAMERA: // Camera follow controlled boid
+		yawRad = sControlledBoid->getYaw() * (PI / 180.0);
+		offset = {
+			-sin(yawRad) * sCameraDistance,
+			sCameraDistance / 5.0,
+			-cos(yawRad) * sCameraDistance
+		};
+		followCamPos = cbPos + offset;
+		if (sFollowCamera)
+		{
+			sFollowCamera->setPosition(followCamPos);
+			sFollowCamera->setTarget(cbPos);
+			sFollowCamera->applyView();
+		}
+		break;
+
+	case FIXED_CAMERA: // Camera fixed at the top of the tower
+		if (sTower && sFixedCamera)
+		{
+			height = sTower->getSize().y + sCameraDistance;
+			sFixedCamera->setPosition(Vec3(sTower->getPosition().x, height, sTower->getPosition().z));
+			sFixedCamera->setTarget(cbPos);
+			sFixedCamera->applyView();
+		}
+		break;
+
+	case SIDE_CAMERA: // Camera at right of the controlled boid
+		yawRad = sControlledBoid->getYaw() * (PI / 180.0);
+		forwardDir = { std::sin(yawRad), 0.0, std::cos(yawRad) };
+		right = crossProduct(UnitY, forwardDir);
+		normalize(right);
+		rightCamPos = cbPos + right * sCameraDistance + UnitY * sCameraDistance / 5.0;
+		if (sSideCamera)
+		{
+			sSideCamera->setPosition(rightCamPos);
+			sSideCamera->setTarget(cbPos);
+			sSideCamera->applyView();
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	// Draw scene objects
+	if (sFloor) sFloor->draw();
+	if (sTower) sTower->draw();
+	if (sControlledBoid) sControlledBoid->draw();
+	if (sFlock) sFlock->draw();
 
 	// Swap buffers for animation
 	glutSwapBuffers();
@@ -70,44 +167,64 @@ static void reshape(int w, int h)
 	glLoadIdentity();
 }
 
-static void cameraKeyboard(unsigned char key, int x, int y)
+static void keyboardControl(unsigned char key, int x, int y)
 {
-	// Camera movement controls
-	// WASD for forward, backward, left, right
-	// QE for up and down
-	// ZX for zoom in and out
-	if (!s_camera) return;
-	const double moveAmount = 0.5;
-	const double zoomAmount = 1.0;
+	// Use WASDQE keys to control the player boid:
+	const double rotateAmount = 5.0;    // degrees per key press
+	const double heightStep = 0.5;      // height change per key press
+	if (!sControlledBoid) return;
+
 	switch (key)
 	{
-	case 'w': case 'W':
-		s_camera->moveForward(moveAmount);
+		// Movement controls
+	case 'w': case 'W': // Accelerate forward
+		sControlledBoid->moveForward(1.0);
 		break;
-	case 's': case 'S':
-		s_camera->moveBackward(moveAmount);
+	case 's': case 'S': // Decelerate / move backward
+		sControlledBoid->moveBackward(1.0);
 		break;
-	case 'a': case 'A':
-		s_camera->strafeLeft(moveAmount);
+	case 'a': case 'A': // Rotate left
+		sControlledBoid->rotateYaw(rotateAmount);
 		break;
-	case 'd': case 'D':
-		s_camera->strafeRight(moveAmount);
+	case 'd': case 'D': // Rotate right
+		sControlledBoid->rotateYaw(-rotateAmount);
 		break;
-	case 'q': case 'Q':
-		s_camera->moveUp(moveAmount);
+	case 'q': case 'Q': // Increase height
+		sControlledBoid->setHeight(sControlledBoid->getHeight() + heightStep);
+		{
+			auto p = sControlledBoid->getPosition();
+			p.y = sControlledBoid->getHeight();
+			sControlledBoid->setPosition(p);
+		}
 		break;
-	case 'e': case 'E':
-		s_camera->moveDown(moveAmount);
+	case 'e': case 'E': // Decrease height
+		sControlledBoid->setHeight(sControlledBoid->getHeight() - heightStep);
+		{
+			auto p = sControlledBoid->getPosition();
+			p.y = sControlledBoid->getHeight();
+			sControlledBoid->setPosition(p);
+		}
 		break;
-	case 'z': case 'Z':
-		s_camera->zoomIn(zoomAmount);
+	case 'z': case 'Z': // Stop movement
+		sControlledBoid->stop();
 		break;
-	case 'x': case 'X':
-		s_camera->zoomOut(zoomAmount);
+
+		// Camera switching
+	case '1': // Follow camera
+		sCurrentCamera = FOLLOW_CAMERA;
 		break;
+	case '2': // Fixed camera
+		sCurrentCamera = FIXED_CAMERA;
+		break;
+	case '3': // Side camera
+		sCurrentCamera = SIDE_CAMERA;
+		break;
+
+		// Exit
 	case 27: // Escape key
 		exit(0);
 		break;
+
 	default:
 		break;
 	}
@@ -116,23 +233,23 @@ static void cameraKeyboard(unsigned char key, int x, int y)
 
 static void cameraSpecial(int key, int x, int y)
 {
-	// Camera rotation controls
-	// Arrow keys for yaw and pitch
-	if (!s_camera) return;
-	const double rotateAmount = 5.0;
+	// Use arrow keys to control the special player boid:
+	const double rotateAmount = 5.0; // degrees per key press
+	if (!sControlledBoid) return;
+
 	switch (key)
 	{
-	case GLUT_KEY_LEFT:
-		s_camera->rotate(-rotateAmount, 0.0);
+	case GLUT_KEY_LEFT:		// Rotate left
+		sControlledBoid->rotateYaw(rotateAmount);
 		break;
-	case GLUT_KEY_RIGHT:
-		s_camera->rotate(rotateAmount, 0.0);
+	case GLUT_KEY_RIGHT:	// Rotate right
+		sControlledBoid->rotateYaw(-rotateAmount);
 		break;
-	case GLUT_KEY_UP:
-		s_camera->rotate(0.0, rotateAmount);
+	case GLUT_KEY_UP:		// Accelerate forward
+		sControlledBoid->moveForward(1.0);
 		break;
-	case GLUT_KEY_DOWN:
-		s_camera->rotate(0.0, -rotateAmount);
+	case GLUT_KEY_DOWN:		// Decelerate / move backward
+		sControlledBoid->moveBackward(1.0);
 		break;
 	default:
 		break;
@@ -140,68 +257,47 @@ static void cameraSpecial(int key, int x, int y)
 	glutPostRedisplay();
 }
 
-static void cameraMouse(int button, int state, int x, int y)
+static void mouseFunc(int button, int state, int x, int y)
 {
-	if (!s_camera) return;
+	// Mouse callback: handle wheel as button 3 (up) / 4 (down)
+	// Only react to wheel events when button pressed (most GLUT implementations)
+	if (state != GLUT_DOWN) return;
 
-	// Scroll wheel for zooming
-	if (state == GLUT_DOWN && button == 3) // Scroll up
+	switch (button)
 	{
-		s_camera->zoomIn(1.0);
+	case 3: // wheel up -> zoom in (decrease distance)
+		sCameraDistance = std::max(CAMERA_MIN_DISTANCE, sCameraDistance - CAMERA_ZOOM_STEP);
 		glutPostRedisplay();
-		return;
-	}
-	else if (state == GLUT_DOWN && button == 4) // Scroll down
-	{
-		s_camera->zoomOut(1.0);
+		break;
+	
+	case 4: // wheel down -> zoom out (increase distance)
+		sCameraDistance = std::min(CAMERA_MAX_DISTANCE, sCameraDistance + CAMERA_ZOOM_STEP);
 		glutPostRedisplay();
-		return;
+		break;
+	
+	default:
+		break;
 	}
-
-	// Left button for dragging
-	if (button == GLUT_LEFT_BUTTON)
-	{
-		if (state == GLUT_DOWN)
-		{
-			s_dragging = true;
-			s_lastX = x;
-			s_lastY = y;
-		}
-		else
-		{
-			s_dragging = false;
-		}
-	}
-	glutPostRedisplay();
-}
-
-static void cameraMotion(int x, int y)
-{
-	if (!s_camera || !s_dragging) return;
-
-	// Calculate mouse movement delta
-	int deltaX = x - s_lastX;
-	int deltaY = y - s_lastY;
-
-	// Update last positions
-	s_lastX = x;
-	s_lastY = y;
-
-	// Adjust camera yaw and pitch based on mouse movement
-	const double sensitivity = 0.2;
-	s_camera->rotate(deltaX * sensitivity, -deltaY * sensitivity);
-	glutPostRedisplay();
-}
-
-void registerCameraCallbacks(Camera& cam)
-{
-	s_camera = &cam;
-	glutKeyboardFunc(cameraKeyboard);
-	glutSpecialFunc(cameraSpecial);
-	glutMouseFunc(cameraMouse);
-	glutMotionFunc(cameraMotion);
 }
 
 static void idle(void) { glutPostRedisplay(); }
+
+void registerWorldObjects(
+	Camera& followCamera,
+	Camera& fixedCamera,
+	Camera& sideCamera,
+	Flock& flock,
+	ControlledBoid& controlledBoid,
+	Floor& floor,
+	Tower& tower)
+{
+	sFollowCamera = &followCamera;
+	sFixedCamera = &fixedCamera;
+	sSideCamera = &sideCamera;
+	sFlock = &flock;
+	sControlledBoid = &controlledBoid;
+	sFloor = &floor;
+	sTower = &tower;
+}
 
 /* End of GLUT callback Handlers */

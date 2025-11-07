@@ -1,11 +1,9 @@
 #include <GL\glut.h>
-#include <iostream>
-
 #include "glut_callback.h"
 #include "Camera.h"
 #include "Tower.h"
 #include "Floor.h"
-#include "Boid.h"
+#include "Flock.h"
 
 const GLfloat light_ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };	   // Low ambient light
 const GLfloat light_diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };	   // White diffuse light
@@ -28,30 +26,38 @@ int main(int argc, char* argv[]) {
 
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f); // Gray background
 
-	// Initialize camera
-	Camera camera;
-	camera.applyView();
-	camera.setPosition(0.0, 10.0, 20.0);
-	camera.setTarget(Zero);
+	// Initialize scene objects
+	ControlledBoid controlledBoid;
+	controlledBoid.setPosition(Vec3(20.0, 10.0, 20.0));
 
-	// Create objects
 	Floor floor;
-	floor.setPosition(UnitZ * globalZoom);
-	floor.setSize(200.0, 0.5, 200.0);
-	
-	Tower tower;
-	tower.setPosition(0.0, 0.1, globalZoom);
-	tower.setSize(1.0, 5.0, 1.0);
-	
-	Boid player;
+	floor.setPosition(Zero);
+	floor.setSize(400.0, 1.0, 400.0);
+	floor.setRotation(UnitX);
 
+	Tower tower;
+	tower.setPosition(UnitY * 0.1);
+	tower.setSize(5.0, 50.0, 5.0);
+	tower.setRotation(UnitX * -90.0);
+
+	Flock flock;
+	flock.init(50, 60.0);
+
+	// Initialize cameras
+	Camera sFixedCamera, sSideCamera, sFollowCamera;
 
 	// Register GLUT callbacks
+	registerWorldObjects(
+		sFollowCamera, sFixedCamera, sSideCamera,
+		flock, controlledBoid,
+		floor, tower);
 	glutReshapeFunc(reshape);
 	glutDisplayFunc(display);
 	glutIdleFunc(idle);
-	registerCameraCallbacks(camera);
-
+	glutKeyboardFunc(keyboardControl);
+	glutSpecialFunc(cameraSpecial);
+	glutMouseFunc(mouseFunc);
+	
 	// Enable depth test
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);

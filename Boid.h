@@ -1,5 +1,4 @@
 #pragma once
-
 #include <vector>
 #include "Object.h"
 #include "vecFunctions.h"
@@ -33,4 +32,3 @@ private:
 	void separate(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz);
 	void align(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz);
 };
-

@@ -1,28 +1,26 @@
 #pragma once
 #include <GL/glut.h>
-#include <cmath>
+
 #include "vecFunctions.h"
 
+// Camera class for managing 3D camera transformations
 class Camera
 {
 public:
 	// Constructor and Destructor
 	Camera();
-	Camera(const Vec3 pos, const Vec3 target, const Vec3 up);
-	~Camera();
+	~Camera() = default;
 
 	// Apply the camera transformation
-	void applyView();
+	void applyView() const;
 
 	// Movement methods
 	void moveForward(GLdouble distance);
 	void moveBackward(GLdouble distance);
-	void strafeLeft(GLdouble distance);
-	void strafeRight(GLdouble distance);
 	void moveUp(GLdouble distance);
 	void moveDown(GLdouble distance);
 
-	// Rotation method for yaw and pitch 
+	// Rotation method for yaw and pitch
 	void rotate(GLdouble yawDeg, GLdouble pitchDeg);
 
 	// Zoom methods
@@ -32,7 +30,7 @@ public:
 	// Setters
 	void setPosition(GLdouble x, GLdouble y, GLdouble z);
 	void setPosition(Vec3 v);
-	
+
 	void setTarget(GLdouble x, GLdouble y, GLdouble z);
 	void setTarget(Vec3 t);
 
@@ -45,19 +43,19 @@ public:
 	const Vec3 getUp() const { return up; }
 
 private:
-	Vec3 position;
-	Vec3 target;
-	Vec3 up;
-	GLdouble distanceToTarget;
+	Vec3 position;				// Camera position
+	Vec3 target;				// Camera target point
+	Vec3 up;					// Up vector
+	GLdouble distanceToTarget;	// Distance from position to target
 
 	// Angular orientation
-	GLdouble yawAngle;   // Rotation around Y-axis
+	GLdouble yawAngle;	 // Rotation around Y-axis
 	GLdouble pitchAngle; // Rotation around X-axis
-	
+
 	// Zoom level
 	GLdouble minDistance;
 	GLdouble maxDistance;
 
-	// Helpers
+	// Helper method to update target based on current angles and distance
 	void updateTargetFromAngles();
 };

@@ -1,14 +1,18 @@
 #include <GL/glut.h>
 #include <cmath>
+
 #include "ControlledBoid.h"
 #include "vecFunctions.h"
 
 ControlledBoid::ControlledBoid()
-	: yaw(0.0), height(10.0), speed(0.0), maxSpeed(20.0), acceleration(2.0)
+	: yaw(0.0), height(10.0), speed(0.0),
+	maxSpeed(30.0), acceleration(4.0)
 {
-	setPosition(0.0, height, 0.0);
-	setVelocity(0.0, 0.0, 0.0);
-	setSize(0.5, 0.5, 0.5);
+	setPosition(UnitY * height);
+	setVelocity(Zero);
+	setSize(1.0, 1.0, 1.0);
+	setColors(Color::LightBlue, Color::LightGreen, Color::Cyan);
+	disableCollision();
 }
 
 void ControlledBoid::rotateYaw(GLdouble angle)
@@ -44,32 +48,9 @@ void ControlledBoid::update(GLdouble deltaTime)
 	Vec3 newVelocity = forwardDir * speed;
 	setVelocity(newVelocity);
 
-	// Update position using base class method
-	Vec3 pos = getPosition();
-	Vec3 newPos = pos + newVelocity * deltaTime;
+	// Update position based on velocity
+	auto pos = getPosition();
+	auto newPos = pos + newVelocity * deltaTime;
 	newPos.y = height; // Maintain fixed height
 	setPosition(newPos);
-}
-
-void ControlledBoid::draw()
-{
-	// Draw the controlled boid as a distinct shape (e.g., a larger cone)
-	Vec3 pos = getPosition();
-	Vec3 rotation = getRotation();
-	
-	// Transform
-	glPushMatrix();
-	glTranslated(pos.x, pos.y, pos.z);
-	glRotated(rotation.x, 1.0, 0.0, 0.0);
-	glRotated(rotation.y + yaw, 0.0, 1.0, 0.0);
-	glRotated(rotation.z + 45.0, 0.0, 0.0, 1.0);
-
-	// Draw
-	auto color = Color::Blue;
-	glColor3d(color.x, color.y, color.z);
-	glutSolidCone(0.3, 0.8, 4, 2);
-	color = Color::Black;
-	glColor3d(color.x, color.y, color.z);
-	glutWireCone(0.3, 0.8, 4, 2);
-	glPopMatrix();
 }

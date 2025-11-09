@@ -3,29 +3,50 @@
 #include "Object.h"
 #include "vecFunctions.h"
 
+class ControlledBoid;
+
+// Boid class representing an individual boid in the flock
 class Boid : public Object
 {
 public:
-	// Constructors
 	Boid();
-	Boid(const Vec3 pos);
-	
+	Boid(const Vec3 pos, ControlledBoid* leader);
+
 	// Boid behavior methods
 	void update(const std::vector<Boid*>& boids, GLdouble deltaTime);
 	void draw() override;
+	void setLeader(ControlledBoid* leader) { leaderBoid = leader; }
+	
+	GLdouble getYaw() const { return yaw; }
+
+	// Set body colors
+	void setColors(const Vec3 front, const Vec3 body, const Vec3 wing);
+
+	// Getters for colors
+	const Vec3 getFrontColor() const { return frontColor; }
+	const Vec3 getBodyColor() const { return bodyColor; }
+	const Vec3 getWingColor() const { return wingColor; }
+	const Vec3 getWireColor() const { return wireColor; }
 
 private:
-	// Parameters
-	GLdouble maxSpeed;
-	GLdouble maxForce;
-	GLdouble neighRadius;
-	GLdouble separationRadius;
+	// Movement attributes
+	GLdouble maxSpeed;			// Maximum speed
+	GLdouble maxForce;			// Maximum steering force
+	GLdouble neighRadius;		// Neighborhood radius
+	GLdouble separationRadius;	// Separation radius
+	GLdouble yaw;				// Facing direction in degrees
 
 	// Weights for behaviors
-	GLdouble weightCohesion;
-	GLdouble weightSeparation;
-	GLdouble weightAlignment;
-	
+	GLdouble weightCohesion;	// Weight for cohesion behavior
+	GLdouble weightSeparation;	// Weight for separation behavior
+	GLdouble weightAlignment;	// Weight for alignment behavior
+
+	// Body colors
+	Vec3 frontColor, bodyColor, wingColor, wireColor = Color::Black;
+
+	// Leader
+	ControlledBoid* leaderBoid = nullptr; // Pointer to the controlled boid leader
+
 	// Behavior methods
 	void applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt);
 	void flock(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz);

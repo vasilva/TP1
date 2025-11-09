@@ -15,9 +15,6 @@ public:
 	// Override update to include control
 	void update(GLdouble deltaTime);
 
-	// Draw method
-	void draw() override;
-
 	// Get facing direction
 	GLdouble getYaw() const { return yaw; }
 
@@ -26,9 +23,9 @@ public:
 	GLdouble getHeight() const { return height; }
 
 private:
-	GLdouble yaw;		// Facing direction in degrees, 0 = +Z direction
-	GLdouble height;	// Fixed height above ground
-	GLdouble speed;		// Movement speed
-	GLdouble maxSpeed;	// Maximum speed
-	GLdouble acceleration; // Acceleration value
+	GLdouble yaw;			// Facing direction in degrees, 0 = +Z direction
+	GLdouble height;		// Fixed height above ground
+	GLdouble speed;			// Movement speed
+	GLdouble maxSpeed;		// Maximum speed
+	GLdouble acceleration;	// Acceleration value
 };

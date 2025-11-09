@@ -1,19 +1,18 @@
-#include "Tower.h"
+#include "Obstacle.h"
 
-Tower::Tower()
-	: fillColor(Color::Red), wireColor(Color::Black)
+Obstacle::Obstacle()
+	: fillColor(Color::DarkGray), wireColor(Color::Black)
 {
 }
 
-Tower::Tower(const Vec3 pos, const Vec3 size, const Vec3 color)
+Obstacle::Obstacle(const Vec3 pos, const Vec3 size, const Vec3 color)
 	: fillColor(color), wireColor(Color::Black)
 {
 	setPosition(pos);
 	setSize(size);
 }
 
-// Draw the tower as a cone
-void Tower::draw()
+void Obstacle::draw()
 {
 	auto pos = getPosition();
 	auto size = getSize();
@@ -25,13 +24,14 @@ void Tower::draw()
 	glRotated(rotation.x, 1.0, 0.0, 0.0);
 	glRotated(rotation.y, 0.0, 1.0, 0.0);
 	glRotated(rotation.z, 0.0, 0.0, 1.0);
+	glScaled(size.x, size.y, size.z);
 
 	// Draw solid cone
 	glColor3d(fillColor.x, fillColor.y, fillColor.z);
-	glutSolidCone(size.x, size.y, 30, 2);
+	glutSolidCube(1.0);
 
 	// Draw wireframe
 	glColor3d(wireColor.x, wireColor.y, wireColor.z);
-	glutWireCone(size.x, size.y, 30, 2);
+	glutWireCube(1.0);
 	glPopMatrix();
 }

@@ -1,40 +1,18 @@
+#include <cmath>
+#include <algorithm>
+
 #include "Camera.h"
 
 Camera::Camera()
 	: yawAngle(0.0), pitchAngle(0.0),
-	position(0.0, 0.0, 5.0),
-	target(Zero),
-	up(UnitY),
+	position(Zero), target(Zero), up(UnitY),
 	minDistance(5.0), maxDistance(100.0)
 {
-	Vec3 dir = target - position;
-	GLdouble dist = length(dir);
-	if (dist > 0.0) distanceToTarget = dist;
+	distanceToTarget = minDistance * 2.0;
 	updateTargetFromAngles();
 }
 
-Camera::Camera(const Vec3 pos, const Vec3 target, const Vec3 up)
-	: yawAngle(0.0), pitchAngle(0.0),
-	position(pos), target(target), up(up),
-	minDistance(5.0), maxDistance(100.0)
-{
-	Vec3 dir = target - position;
-	GLdouble dist = length(dir);
-	distanceToTarget = dist > 0.0 ? dist : 5.0;
-
-	// Calculate initial yaw and pitch angles
-	if (dist > 0.0)
-	{
-		normalize(dir);
-		yawAngle = atan2(dir.x, dir.z) * 180.0 / PI;
-		pitchAngle = asin(dir.y) * 180.0 / PI;
-	}
-	updateTargetFromAngles();
-}
-
-Camera::~Camera() {}
-
-void Camera::applyView()
+void Camera::applyView() const
 {
 	// Set the view matrix
 	glMatrixMode(GL_MODELVIEW);
@@ -69,34 +47,6 @@ void Camera::moveForward(GLdouble distance)
 void Camera::moveBackward(GLdouble distance)
 {
 	moveForward(-distance);
-}
-
-void Camera::strafeLeft(GLdouble distance)
-{
-	// Calculate the forward vector
-	GLdouble yawRad = yawAngle * (PI / 180.0);
-	GLdouble pitchRad = pitchAngle * (PI / 180.0);
-	Vec3 forward = {
-		std::cos(pitchRad) * std::sin(yawRad),
-		std::sin(pitchRad),
-		std::cos(pitchRad) * std::cos(yawRad)
-	};
-	normalize(forward);
-
-	// Calculate the left vector
-	Vec3 worldUp = UnitZ;
-	Vec3 left = crossProduct(worldUp, forward); // left = up x forward
-	normalize(left);
-
-	// Move the camera position left
-	position += left * distance;
-
-	updateTargetFromAngles();
-}
-
-void Camera::strafeRight(GLdouble distance)
-{
-	strafeLeft(-distance);
 }
 
 void Camera::moveUp(GLdouble distance)

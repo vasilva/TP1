@@ -117,6 +117,11 @@ inline void limit(Vec3& v, GLdouble max)
 	}
 }
 
+inline Vec3 lerp(const Vec3& a, const Vec3& b, GLdouble alpha)
+{
+	return a + (b - a) * alpha;
+}
+
 // Common colors
 namespace Color
 {

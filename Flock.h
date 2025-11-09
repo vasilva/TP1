@@ -1,24 +1,21 @@
 #pragma once
 #include <vector>
 #include "Boid.h"
+#include "ControlledBoid.h"
 
+// Flock class managing a collection of boids
 class Flock
 {
 public:
-	Flock() {}
+	Flock() = default;
 	~Flock();
 
-	// Initialize n boids
-	void init(int n, GLdouble spread = 50.0);
-
-	// Update
+	// Initialize the flock with n boids around the leader within a spread radius
+	void init(int n, ControlledBoid* leader, GLdouble spread);
 	void update(GLdouble dt);
-
-	// Draw
 	void draw();
-
 	const std::vector<Boid*> getBoids() const { return boids; }
 
 private:
-	std::vector<Boid*> boids;
+	std::vector<Boid*> boids; // Collection of boid pointers
 };

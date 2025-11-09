@@ -1,19 +1,56 @@
 #include <GL\glut.h>
+#include <vector>
+#include <random>
 #include "glut_callback.h"
 #include "Camera.h"
 #include "Tower.h"
 #include "Floor.h"
+#include "Obstacle.h"
 #include "Flock.h"
+#include "ControlledBoid.h"
 
-const GLfloat light_ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };	   // Low ambient light
-const GLfloat light_diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };	   // White diffuse light
-const GLfloat light_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };   // White specular light
-const GLfloat light_position[] = { 0.0f, 20.0f, 20.0f, 0.0f }; // Light position
+// Lighting parameters
+const GLfloat light_ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };		// Ambient light
+const GLfloat light_diffuse[] = { 0.8f, 0.8f, 0.8f, 1.0f };		// Diffuse light
+const GLfloat light_specular[] = { 0.2f, 0.2f, 0.2f, 1.0f };	// Specular light
+const GLfloat light_position[] = { 0.0f, 100.0f, 20.0f, 0.0f };	// Light position
 
-const GLfloat mat_ambient[] = { 0.7f, 0.7f, 0.7f, 1.0f };  // Material ambient reflectance
-const GLfloat mat_diffuse[] = { 0.8f, 0.8f, 0.8f, 1.0f };  // Material diffuse reflectance
-const GLfloat mat_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f }; // Material specular reflectance
-const GLfloat high_shininess[] = { 100.0f };
+// Material parameters
+const GLfloat mat_ambient[] = { 0.6f, 0.6f, 0.6f, 1.0f };  // Material ambient reflectance
+const GLfloat mat_diffuse[] = { 0.7f, 0.7f, 0.7f, 1.0f };  // Material diffuse reflectance
+const GLfloat mat_specular[] = { 0.2f, 0.2f, 0.2f, 1.0f }; // Material specular reflectance
+const GLfloat high_shininess[] = { 20.0f };
+
+// Function to create random walls (obstacles) on the floor
+static void makeWalls(std::vector<Obstacle>& walls, const Floor& floor)
+{
+	auto floorSize = floor.getSize();
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<GLdouble> distPos(-floorSize.x * 0.5, floorSize.z * 0.5);
+	std::uniform_real_distribution<GLdouble> distSize(5.0, 30.0);
+
+	const int obstacleCount = 200;
+	for (int i = 0; i < obstacleCount; ++i)
+	{
+		// Random size
+		GLdouble s = distSize(gen);
+		Vec3 size = { s, s * 2.0, distSize(gen) };
+
+		// Random position
+		// Ensure obstacles are not too close to the center
+		GLdouble px, pz;
+		px = distPos(gen);
+		pz = distPos(gen);
+
+		if (std::abs(px) < 20.0) px += (px >= 0.0) ? 20.0 : -20.0;
+		if (std::abs(pz) < 20.0) pz += (pz >= 0.0) ? 20.0 : -20.0;
+
+		Vec3 pos = { px, size.y * 0.5, pz };
+		walls.emplace_back(pos, size);
+		walls.back().enableCollision();
+	}
+}
 
 int main(int argc, char* argv[]) {
 
@@ -24,40 +61,51 @@ int main(int argc, char* argv[]) {
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 	glutCreateWindow("TP1 - boids");
 
-	glClearColor(0.3f, 0.3f, 0.3f, 1.0f); // Gray background
+	glClearColor(0.3f, 0.9f, 0.9f, 1.0f); // Cyan background
 
-	// Initialize scene objects
+	// Create controlled boid
 	ControlledBoid controlledBoid;
-	controlledBoid.setPosition(Vec3(20.0, 10.0, 20.0));
+	controlledBoid.setPosition(20.0, 10.0, 20.0);
+	controlledBoid.setSize(0.5, 0.1, 0.5);
 
+	// Create floor
 	Floor floor;
 	floor.setPosition(Zero);
-	floor.setSize(400.0, 1.0, 400.0);
-	floor.setRotation(UnitX);
+	floor.setSize(1000.0, 1.0, 1000.0);
+	floor.setRotation(Zero);
+	auto floorSize = floor.getSize();
 
+	// Create tower at the center of the floor
 	Tower tower;
-	tower.setPosition(UnitY * 0.1);
-	tower.setSize(5.0, 50.0, 5.0);
+	tower.setPosition(Zero);
+	tower.setSize(10.0, 100.0, 10.0);
 	tower.setRotation(UnitX * -90.0);
+	gWorldTower = &tower;
 
+	// Create several obstacles scattered over the floor
+	std::vector<Obstacle> walls;
+	gWorldObstacles = &walls;
+	makeWalls(walls, floor);
+
+	// Initialize flock
 	Flock flock;
-	flock.init(50, 60.0);
+	flock.init(50, &controlledBoid, floorSize.x * 0.2);
 
 	// Initialize cameras
-	Camera sFixedCamera, sSideCamera, sFollowCamera;
+	Camera followCamera, fixedCamera, sideCamera;
 
 	// Register GLUT callbacks
 	registerWorldObjects(
-		sFollowCamera, sFixedCamera, sSideCamera,
+		followCamera, fixedCamera, sideCamera,
 		flock, controlledBoid,
-		floor, tower);
+		floor, tower, walls);
 	glutReshapeFunc(reshape);
 	glutDisplayFunc(display);
 	glutIdleFunc(idle);
 	glutKeyboardFunc(keyboardControl);
 	glutSpecialFunc(cameraSpecial);
 	glutMouseFunc(mouseFunc);
-	
+
 	// Enable depth test
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -84,6 +132,7 @@ int main(int argc, char* argv[]) {
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialfv(GL_FRONT, GL_SHININESS, high_shininess);
 
+	// Start GLUT main loop
 	glutMainLoop();
-	return 0;
+	return EXIT_SUCCESS;
 }

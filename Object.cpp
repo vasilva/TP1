@@ -4,9 +4,8 @@ Object::Object() :
 	position(Zero),
 	rotation(Zero),
 	velocity(Zero),
-	size(1.0, 1.0, 1.0) {}
-
-Object::~Object() {}
+	size(1.0, 1.0, 1.0),
+	hasCollider(true) {}
 
 void Object::setPosition(GLdouble x, GLdouble y, GLdouble z)
 {

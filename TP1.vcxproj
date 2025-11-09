@@ -133,7 +133,9 @@
     <ClCompile Include="Floor.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Object.cpp" />
+    <ClCompile Include="Obstacle.cpp" />
     <ClCompile Include="Tower.cpp" />
+    <ClCompile Include="Wold.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Boid.h" />
@@ -143,8 +145,10 @@
     <ClInclude Include="Floor.h" />
     <ClInclude Include="glut_callback.h" />
     <ClInclude Include="Object.h" />
+    <ClInclude Include="Obstacle.h" />
     <ClInclude Include="Tower.h" />
     <ClInclude Include="vecFunctions.h" />
+    <ClInclude Include="World.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

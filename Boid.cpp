@@ -1,6 +1,6 @@
 #include <GL/glut.h>
 #include <cmath>
-#include <iostream>
+
 #include "vecFunctions.h"
 #include "Boid.h"
 #include "World.h"
@@ -36,7 +36,10 @@ void Boid::update(const std::vector<Boid*>& boids, GLdouble deltaTime)
 
 	// Update position based on velocity
 	auto newPos = pos + vel * deltaTime;
-	newPos.y = pos.y; // Keep y constant for 2D plane movement
+
+	// Prevent falling below ground level
+	if (newPos.y < 0.1) newPos.y = 0.1;
+
 	setPosition(newPos);
 }
 
@@ -75,7 +78,7 @@ void Boid::applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt)
 		{
 			// Skip non-collidable obstacles
 			if (!obs.canCollide()) continue;
-			
+
 			// Obstacle position and size
 			Vec3 obsPos = obs.getPosition();
 			Vec3 obsSize = obs.getSize();
@@ -86,7 +89,7 @@ void Boid::applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt)
 			if (std::abs(myPos.x - obsPos.x) > halfWidth ||
 				std::abs(myPos.z - obsPos.z) > halfDepth)
 				continue; // No threat
-			
+
 			// Use squared distance to avoid sqrt for performance
 			GLdouble dx = myPos.x - obsPos.x;
 			GLdouble dz = myPos.z - obsPos.z;
@@ -103,7 +106,7 @@ void Boid::applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt)
 				GLdouble normalized = (threatRadius - dist) / threatRadius;
 				GLdouble strength = normalized * normalized;
 				if (dist < radius * 0.5) strength = std::min(1.0, strength * 3.0);
-				
+
 				// Direction away from obstacle
 				Vec3 away = { dx, 0.0, dz };
 				normalize(away);
@@ -122,7 +125,7 @@ void Boid::applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt)
 		// Tower position
 		Vec3 towerPos = gWorldTower->getPosition();
 		Vec3 myPos = getPosition();
-		
+
 		// Use squared distance to avoid sqrt for performance
 		GLdouble dx = myPos.x - towerPos.x;
 		GLdouble dz = myPos.z - towerPos.z;
@@ -161,15 +164,15 @@ void Boid::applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt)
 		// Positions
 		Vec3 myPos = getPosition();
 		Vec3 leaderPos = leaderBoid->getPosition();
-		
+
 		// Direction the leader is facing
 		GLdouble leaderYaw = leaderBoid->getYaw() * (PI / 180.0);
 		Vec3 leaderForward = { std::sin(leaderYaw), 0.0, std::cos(leaderYaw) };
 		normalize(leaderForward);
-		
+
 		// Desired follow distance based on leader speed	
-		const GLdouble baseFollowDist = 5.0; 
-		
+		const GLdouble baseFollowDist = 5.0;
+
 		// Leader speed
 		Vec3 leaderVel = leaderBoid->getVelocity();
 		GLdouble leaderSpeed = length(leaderVel);
@@ -177,41 +180,52 @@ void Boid::applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt)
 
 		// Calculate follow target position behind the leader
 		Vec3 followTarget = leaderPos - leaderForward * followDist;
-		
-		// Keep same height
-		followTarget.y = myPos.y;
 
-		// Vector to the follow target
-		Vec3 toTarget = { followTarget.x - myPos.x, 0.0, followTarget.z - myPos.z };
-		GLdouble dist = length(toTarget);
-		if (dist > 0.001)
+		// Vector from boid to follow target
+		Vec3 toTarget = followTarget - myPos;
+
+		// Horizontal distance and vertical distance
+		GLdouble horizDist = std::sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z);
+		GLdouble vertDist = toTarget.y;
+		Vec3 horizSteer = Zero;
+		if (horizDist > 0.001)
 		{
-			normalize(toTarget);
-
-			// desired velocity na direção do target
-			const GLdouble leaderWeight = 1.0;     
-			const GLdouble leaderInfluenceRadius = 500.0; 
-			GLdouble influence = 1.0;
-			
-			// falloff based on distance
-			if (dist > leaderInfluenceRadius) influence = 0.0;
-			// linear falloff
-			else influence = 1.0 - (dist / leaderInfluenceRadius);
-			
-			// Calculate steering force towards follow target
-			Vec3 desired = toTarget * maxSpeed;
-			Vec3 steerLeader = { desired.x - getVelocity().x, 0.0, desired.z - getVelocity().z };
-			leaderAttract = steerLeader * (leaderWeight * influence);
+			Vec3 toTargetXZ = { toTarget.x, 0.0, toTarget.z };
+			normalize(toTargetXZ);
+			Vec3 desiredXZ = toTargetXZ * maxSpeed;
+			horizSteer.x = desiredXZ.x - getVelocity().x;
+			horizSteer.z = desiredXZ.z - getVelocity().z;
+			// limit per-component via limit on vector
+			limit(horizSteer, maxForce);
 		}
+
+		// Compute vertical steering: proportional to vertical distance, smoothed
+		// verticalGain controls how responsive boids follow height changes
+		const GLdouble verticalGain = 0.8; // ajuste conforme necessário
+		GLdouble desiredVy = std::min(std::max(vertDist * verticalGain, -maxSpeed), maxSpeed);
+		GLdouble steerVy = desiredVy - getVelocity().y;
+
+		// Combine horizontal and vertical steering
+		Vec3 steerLeader = { horizSteer.x, steerVy, horizSteer.z };
+
+		// Weight and influence falloff
+		const GLdouble leaderWeight = 1.5;
+		const GLdouble leaderInfluenceRadius = 500.0;
+		GLdouble influence = 1.0;
+		if (horizDist > leaderInfluenceRadius) influence = 0.0;
+		else influence = 1.0 - (horizDist / leaderInfluenceRadius);
+
+		leaderAttract = steerLeader * (leaderWeight * influence);
 	}
 	// Combine all steering forces
 	Vec3 steer = cohesion + separation + alignment + obstacleAvoid + towerAvoid + leaderAttract;
-	steer.y = 0.0;
+	// allow y from leaderAttract; other components already zeroed
 	limit(steer, maxForce);
 
 	// Update velocity
 	Vec3 newVel = getVelocity() + steer * dt;
-	newVel.y = 0.0;
+	// Clamp vertical speed to reasonable range
+	newVel.y = std::min(std::max(newVel.y, -maxSpeed * 0.5), maxSpeed * 0.5);
 	limit(newVel, maxSpeed);
 	setVelocity(newVel);
 }
@@ -271,9 +285,9 @@ void Boid::draw()
 
 void Boid::setColors(const Vec3 front, const Vec3 body, const Vec3 wing)
 {
-		frontColor = front;
-		bodyColor = body;
-		wingColor = wing;	
+	frontColor = front;
+	bodyColor = body;
+	wingColor = wing;
 }
 
 // Cohesion behavior: steer towards average position of neighbors

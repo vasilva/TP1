@@ -11,15 +11,15 @@
 
 // Lighting parameters
 const GLfloat light_ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };		// Ambient light
-const GLfloat light_diffuse[] = { 0.8f, 0.8f, 0.8f, 1.0f };		// Diffuse light
-const GLfloat light_specular[] = { 0.2f, 0.2f, 0.2f, 1.0f };	// Specular light
+const GLfloat light_diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };		// Diffuse light
+const GLfloat light_specular[] = { 0.3f, 0.3f, 0.3f, 1.0f };	// Specular light
 const GLfloat light_position[] = { 0.0f, 100.0f, 20.0f, 0.0f };	// Light position
 
 // Material parameters
 const GLfloat mat_ambient[] = { 0.6f, 0.6f, 0.6f, 1.0f };  // Material ambient reflectance
 const GLfloat mat_diffuse[] = { 0.7f, 0.7f, 0.7f, 1.0f };  // Material diffuse reflectance
 const GLfloat mat_specular[] = { 0.2f, 0.2f, 0.2f, 1.0f }; // Material specular reflectance
-const GLfloat high_shininess[] = { 20.0f };
+const GLfloat high_shininess[] = { 30.0f };
 
 // Function to create random walls (obstacles) on the floor
 static void makeWalls(std::vector<Obstacle>& walls, const Floor& floor)
@@ -56,12 +56,17 @@ int main(int argc, char* argv[]) {
 
 	// Initialize GLUT
 	glutInit(&argc, argv);
-	glutInitWindowSize(1920, 1080);
 	glutInitWindowPosition(0, 0);
+	glutInitWindowSize(1920, 1080);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 	glutCreateWindow("TP1 - boids");
+	glutFullScreen();
 
-	glClearColor(0.3f, 0.9f, 0.9f, 1.0f); // Cyan background
+	Vec3 backgroundColor(0.3, 0.9, 0.9); // Cyan background
+	glClearColor(static_cast<GLfloat>(backgroundColor.x),
+		static_cast<GLfloat>(backgroundColor.y),
+		static_cast<GLfloat>(backgroundColor.z),
+		1.0f);
 
 	// Create controlled boid
 	ControlledBoid controlledBoid;

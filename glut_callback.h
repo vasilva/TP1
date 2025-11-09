@@ -40,6 +40,7 @@ static std::vector<Obstacle>* sWalls = nullptr;
 
 // Time tracking
 static GLdouble sLastTime = 0.0;
+static bool sFullscreen = true;
 
 /* GLUT callback Handlers */
 
@@ -232,6 +233,19 @@ static void keyboardControl(unsigned char key, int x, int y)
 	case 'z': case 'Z': // Stop movement
 		sControlledBoid->stop();
 		break;
+
+	case 'f': case 'F': // Toggle fullscreen
+		if (sFullscreen)
+		{
+			glutPositionWindow(0, 0);
+			glutReshapeWindow(1280, 720);
+			sFullscreen = false;
+		}
+		else
+		{
+			glutFullScreen();
+			sFullscreen = true;
+		}
 
 		// Camera switching
 	case '1': sCurrentCamera = FOLLOW_CAMERA; break;

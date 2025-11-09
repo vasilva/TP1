@@ -28,10 +28,10 @@ void Tower::draw()
 
 	// Draw solid cone
 	glColor3d(fillColor.x, fillColor.y, fillColor.z);
-	glutSolidCone(size.x, size.y, 30, 2);
+	glutSolidCone(size.x, size.y, 30, 1);
 
 	// Draw wireframe
 	glColor3d(wireColor.x, wireColor.y, wireColor.z);
-	glutWireCone(size.x, size.y, 30, 2);
+	glutWireCone(size.x, size.y, 30, 1);
 	glPopMatrix();
 }

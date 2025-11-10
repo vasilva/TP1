@@ -171,7 +171,7 @@ void Boid::applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt)
 		normalize(leaderForward);
 
 		// Desired follow distance based on leader speed	
-		const GLdouble baseFollowDist = 5.0;
+		const GLdouble baseFollowDist = 1.0;
 
 		// Leader speed
 		Vec3 leaderVel = leaderBoid->getVelocity();

@@ -77,6 +77,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\vinic\Meu Drive %28vinicius.alex89%40gmail.com%29\CG\Glew and Glut\freeglut\include;C:\Users\vinic\Meu Drive %28vinicius.alex89%40gmail.com%29\CG\Glew and Glut\glew-1.11.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -131,6 +132,7 @@
     <ClCompile Include="ControlledBoid.cpp" />
     <ClCompile Include="Flock.cpp" />
     <ClCompile Include="Floor.cpp" />
+    <ClCompile Include="HUD.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="Obstacle.cpp" />
@@ -144,6 +146,7 @@
     <ClInclude Include="Flock.h" />
     <ClInclude Include="Floor.h" />
     <ClInclude Include="glut_callback.h" />
+    <ClInclude Include="HUD.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="Obstacle.h" />
     <ClInclude Include="Tower.h" />

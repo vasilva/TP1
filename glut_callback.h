@@ -12,6 +12,7 @@
 #include "Camera.h"
 #include "World.h"
 #include "vecFunctions.h"
+#include "HUD.h"
 
 /* GLUT callback Handlers variables */
 
@@ -21,11 +22,11 @@ static Camera* sFixedCamera = nullptr;
 static Camera* sSideCamera = nullptr;
 
 // Camera parameters
-static const GLdouble CAMERA_MIN_DISTANCE = 10.0;
-static const GLdouble CAMERA_MAX_DISTANCE = 100.0;
+static const GLdouble CAMERA_MIN_DISTANCE = 20.0;
+static const GLdouble CAMERA_MAX_DISTANCE = 150.0;
 static const GLdouble CAMERA_SMOOTH_SPEED = 6.0;
 static const GLdouble CAMERA_ZOOM_STEP = 1.5;
-static GLdouble sCameraDistance = 15.0;
+static GLdouble sCameraDistance = 40.0;
 
 // Camera types
 enum CameraType { FOLLOW_CAMERA = 1, FIXED_CAMERA, SIDE_CAMERA };
@@ -73,6 +74,7 @@ static void display(void)
 		towerPos = sTower->getPosition();
 		towerSize = sTower->getSize();
 	}
+	Vec3 flockCenter = sFlock ? sFlock->getAvgPosition() : cbPos;
 	Vec3 desiredPos, desiredTarget, currPos, currTarget, smoothPos, smoothTarget;
 	Vec3 offset, forwardDir, rightCamPos, right;
 	GLdouble yawRad = 0.0, height, t;
@@ -87,7 +89,7 @@ static void display(void)
 			yawRad = sControlledBoid->getYaw() * (PI / 180.0);
 			offset = {
 				-sin(yawRad) * sCameraDistance,
-				sCameraDistance * 0.1,
+				sCameraDistance * 0.2,
 				-cos(yawRad) * sCameraDistance
 			};
 			desiredPos = cbPos + offset;
@@ -119,7 +121,7 @@ static void display(void)
 			// Fixed Camera position and target
 			height = towerSize.y + sCameraDistance * 0.5;
 			sFixedCamera->setPosition(Vec3(towerPos.x, height, towerPos.z));
-			sFixedCamera->setTarget(cbPos);
+			sFixedCamera->setTarget(flockCenter);
 			sFixedCamera->applyView();
 		}
 		break;
@@ -133,7 +135,7 @@ static void display(void)
 			right = crossProduct(forwardDir, UnitY);
 			normalize(right);
 			desiredPos = cbPos + right * sCameraDistance + UnitY * sCameraDistance / 5.0;
-			desiredTarget = cbPos;
+			desiredTarget = cbPos - forwardDir;
 
 			// Current camera position and target
 			currPos = sSideCamera->getPosition();
@@ -166,6 +168,9 @@ static void display(void)
 	if (sWalls)
 		for (auto& w : *sWalls)
 			w.draw();
+
+	// Draw HUD overlay
+	drawHUD(sFlock ? sFlock->getBoidCount() : 0);
 
 	// Swap buffers for animation
 	glutSwapBuffers();
@@ -251,6 +256,14 @@ static void keyboardControl(unsigned char key, int x, int y)
 	case '1': sCurrentCamera = FOLLOW_CAMERA; break;
 	case '2': sCurrentCamera = FIXED_CAMERA; break;
 	case '3': sCurrentCamera = SIDE_CAMERA; break;
+
+		// Increase/decrease boid count
+	case '+': case '=':
+		if (sFlock) sFlock->addBoid();
+		break;
+	case '-': case '_':
+		if (sFlock) sFlock->removeBoid();
+		break;
 
 		// Exit
 	case 27: exit(EXIT_SUCCESS); break;

@@ -22,7 +22,7 @@ const GLfloat mat_specular[] = { 0.2f, 0.2f, 0.2f, 1.0f }; // Material specular 
 const GLfloat high_shininess[] = { 30.0f };
 
 // Function to create random walls (obstacles) on the floor
-static void makeWalls(std::vector<Obstacle>& walls, const Floor& floor)
+static void makeWalls(std::vector<Obstacle>& walls, const Floor& floor, int obstacleCount)
 {
 	auto floorSize = floor.getSize();
 	std::random_device rd;
@@ -30,7 +30,11 @@ static void makeWalls(std::vector<Obstacle>& walls, const Floor& floor)
 	std::uniform_real_distribution<GLdouble> distPos(-floorSize.x * 0.5, floorSize.z * 0.5);
 	std::uniform_real_distribution<GLdouble> distSize(5.0, 30.0);
 
-	const int obstacleCount = 200;
+	if (obstacleCount <= 0)
+		obstacleCount = 50; // Default number of obstacles
+	if (obstacleCount > 200)
+		obstacleCount = 200; // Max limit
+
 	for (int i = 0; i < obstacleCount; ++i)
 	{
 		// Random size
@@ -90,7 +94,7 @@ int main(int argc, char* argv[]) {
 	// Create several obstacles scattered over the floor
 	std::vector<Obstacle> walls;
 	gWorldObstacles = &walls;
-	makeWalls(walls, floor);
+	makeWalls(walls, floor, 100);
 
 	// Initialize flock
 	Flock flock;

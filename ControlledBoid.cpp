@@ -48,6 +48,15 @@ void ControlledBoid::update(GLdouble deltaTime)
 	Vec3 newVelocity = forwardDir * speed;
 	setVelocity(newVelocity);
 
+	// Calculate speed factor for wing animation
+	GLdouble speedLength = length(newVelocity);
+	GLdouble speedFactor = 0.0;
+	if (maxSpeed > 1e-6) speedFactor = std::min(1.0, speedLength / maxSpeed);
+
+	// Wing animation update
+	GLdouble flapRate = getWingBaseRate() * (0.5 + 1.5 * speedFactor);
+	setWingAngle(getWingAngle() + flapRate * deltaTime);
+
 	// Update position based on velocity
 	auto pos = getPosition();
 	auto newPos = pos + newVelocity * deltaTime;

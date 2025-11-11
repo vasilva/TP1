@@ -17,7 +17,16 @@ public:
 	void draw() override;
 	void setLeader(ControlledBoid* leader) { leaderBoid = leader; }
 	
+	// Getters for movement attributes
 	GLdouble getYaw() const { return yaw; }
+	GLdouble getWingAngle() const { return wingAngle; }
+	GLdouble getWingAmplitude() const { return wingAmplitude; }
+	GLdouble getWingBaseRate() const { return wingBaseRate; }
+
+	// Setters for movement attributes
+	void setWingAngle(GLdouble angle) { wingAngle = angle; }
+	void setWingAmplitude(GLdouble amplitude) { wingAmplitude = amplitude; }
+	void setWingBaseRate(GLdouble rate) { wingBaseRate = rate; }
 
 	// Set body colors
 	void setColors(const Vec3 front, const Vec3 body, const Vec3 wing);
@@ -43,6 +52,11 @@ private:
 
 	// Body colors
 	Vec3 frontColor, bodyColor, wingColor, wireColor = Color::Black;
+
+	// Wing animation state
+	GLdouble wingAngle;		// Current wing angle
+	GLdouble wingAmplitude; // Wing flapping amplitude
+	GLdouble wingBaseRate;	// Wing flapping base rate
 
 	// Leader
 	ControlledBoid* leaderBoid = nullptr; // Pointer to the controlled boid leader

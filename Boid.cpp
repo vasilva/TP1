@@ -9,9 +9,10 @@
 #include "Tower.h"
 
 Boid::Boid()
-	: maxSpeed(50.0), maxForce(30.0), yaw(0.0),
-	neighRadius(10.0), separationRadius(10.0),
-	weightCohesion(1.0), weightSeparation(2.0), weightAlignment(1.0)
+	: maxSpeed(50.0), maxForce(40.0), yaw(0.0),
+	neighRadius(5.0), separationRadius(8.0),
+	weightCohesion(1.0), weightSeparation(2.0), weightAlignment(1.0),
+	wingAngle(0.0), wingAmplitude(30.0), wingBaseRate(8.0)
 {
 	setPosition(Zero);
 	setVelocity(Zero);
@@ -30,6 +31,15 @@ void Boid::update(const std::vector<Boid*>& boids, GLdouble deltaTime)
 {
 	applyBehaviors(boids, deltaTime);
 
+	// Wing animation update
+	GLdouble speed = length(getVelocity());
+	GLdouble speedFactor = 0.0;
+	if (maxSpeed > 1e-6) speedFactor = std::min(1.0, speed / maxSpeed);
+
+	// Flap rate increases with speed (min 0.5x to max 2.0x)
+	GLdouble flapRate = wingBaseRate * (0.5 + 1.5 * speedFactor);
+	wingAngle += flapRate * deltaTime;
+
 	// Get current position and velocity
 	const Vec3 pos = getPosition();
 	const Vec3 vel = getVelocity();
@@ -43,7 +53,7 @@ void Boid::update(const std::vector<Boid*>& boids, GLdouble deltaTime)
 	setPosition(newPos);
 }
 
-// Apply flocking behaviors: cohesion, separation, alignment, obstacle avoidance and leader following
+// Apply flocking behaviors
 void Boid::applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt)
 {
 	Vec3 cohesion(Zero);
@@ -54,180 +64,175 @@ void Boid::applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt)
 	separate(neighbors, separation.x, separation.y, separation.z);
 	align(neighbors, alignment.x, alignment.y, alignment.z);
 
-	// Force the y-component to be zero for 2D plane movement
+	// Force zero y for planar behaviour
 	cohesion.y = 0.0;
 	separation.y = 0.0;
 	alignment.y = 0.0;
 
-	// Apply weighted forces
+	// Apply weights
 	cohesion *= weightCohesion;
 	separation *= weightSeparation;
 	alignment *= weightAlignment;
 
-	const GLdouble obstacleWeight = 40.0;	// Weight for obstacle avoidance
-	const GLdouble safetyPadding = 3.0;		// Extra distance to avoid obstacles
-
 	// Obstacle avoidance
+	const GLdouble obstacleWeight = 10.0;
+	const GLdouble safetyPadding = 1.0;
+
 	Vec3 obstacleAvoid(Zero);
 	if (gWorldObstacles && !gWorldObstacles->empty())
 	{
-		// Check each obstacle for potential collision
 		int avoidCount = 0;
 		Vec3 myPos = getPosition();
+
 		for (auto& obs : *gWorldObstacles)
 		{
-			// Skip non-collidable obstacles
 			if (!obs.canCollide()) continue;
-
-			// Obstacle position and size
 			Vec3 obsPos = obs.getPosition();
 			Vec3 obsSize = obs.getSize();
 
-			// AABB check in XZ plane
-			GLdouble halfWidth = obsSize.x * 0.5 + separationRadius + safetyPadding;
-			GLdouble halfDepth = obsSize.z * 0.5 + separationRadius + safetyPadding;
-			if (std::abs(myPos.x - obsPos.x) > halfWidth ||
-				std::abs(myPos.z - obsPos.z) > halfDepth)
-				continue; // No threat
+			// Obstacle AABB in XZ plane
+			GLdouble halfX = obsSize.x * 0.5 + separationRadius + safetyPadding;
+			GLdouble halfZ = obsSize.z * 0.5 + separationRadius + safetyPadding;
 
-			// Use squared distance to avoid sqrt for performance
-			GLdouble dx = myPos.x - obsPos.x;
-			GLdouble dz = myPos.z - obsPos.z;
+			// AABB min and max
+			GLdouble minX = obsPos.x - halfX;
+			GLdouble maxX = obsPos.x + halfX;
+			GLdouble minZ = obsPos.z - halfZ;
+			GLdouble maxZ = obsPos.z + halfZ;
+
+			// AABB rejection test
+			if (myPos.x < minX && myPos.x < obsPos.x - (halfX + separationRadius)) continue;
+			if (myPos.x > maxX && myPos.x > obsPos.x + (halfX + separationRadius)) continue;
+			if (myPos.z < minZ && myPos.z < obsPos.z - (halfZ + separationRadius)) continue;
+			if (myPos.z > maxZ && myPos.z > obsPos.z + (halfZ + separationRadius)) continue;
+
+			// Closest point on AABB to boid (XZ)
+			GLdouble closestX = myPos.x;
+			if (closestX < minX) closestX = minX;
+			if (closestX > maxX) closestX = maxX;
+			GLdouble closestZ = myPos.z;
+			if (closestZ < minZ) closestZ = minZ;
+			if (closestZ > maxZ) closestZ = maxZ;
+
+			// Vector from obstacle surface (closest point) to boid in XZ
+			GLdouble dx = myPos.x - closestX;
+			GLdouble dz = myPos.z - closestZ;
 			GLdouble dist2 = dx * dx + dz * dz;
 
-			// obstacle radius approximate
-			GLdouble radius = std::max(std::max(obsSize.x, obsSize.z) * 0.5, 1.0);
-			GLdouble threatRadius = radius + separationRadius + safetyPadding;
-			GLdouble threatRadius2 = threatRadius * threatRadius;
-			if (dist2 > 0.0 && dist2 < threatRadius2)
-			{
-				// Calculate avoidance strength (non-linear)
-				GLdouble dist = std::sqrt(dist2);
-				GLdouble normalized = (threatRadius - dist) / threatRadius;
-				GLdouble strength = normalized * normalized;
-				if (dist < radius * 0.5) strength = std::min(1.0, strength * 3.0);
+			// Approximate circular threat radius (for smooth falloff)
+			GLdouble approxRadius = std::max(std::max(obsSize.x, obsSize.z) * 0.5, 1.0) + separationRadius + safetyPadding;
+			GLdouble approxRadius2 = approxRadius * approxRadius;
 
-				// Direction away from obstacle
-				Vec3 away = { dx, 0.0, dz };
-				normalize(away);
+			// If inside inflated AABB (dist2 == 0) or within approx radius, compute avoidance
+			if (dist2 == 0.0 || dist2 < approxRadius2)
+			{
+				Vec3 away;
+				GLdouble dist = 0.0;
+				if (dist2 == 0.0)
+				{
+					// Boid is inside the inflated AABB; push directly away from obstacle center in XZ
+					away = { myPos.x - obsPos.x, 0.0, myPos.z - obsPos.z };
+					// fallback if exactly coincident
+					if (length2(away) < 1e-9)
+						away = Vec3(1.0, 0.0, 0.0);
+
+					normalize(away);
+					dist = 0.0;
+				}
+				else
+				{
+					away = { dx, 0.0, dz };
+					dist = std::sqrt(dist2);
+					normalize(away);
+				}
+
+				// Strength: stronger if inside AABB or very close, smooth falloff otherwise
+				GLdouble normalized = 0.0;
+				if (dist == 0.0)
+					normalized = 1.0; // maximum repulsion if inside box
+				else
+					normalized = (approxRadius - dist) / approxRadius; // 0..1
+
+				// non-linear scaling to make force ramp up quickly when near/inside
+				GLdouble strength = normalized * normalized;
+				if (dist < (std::max(obsSize.x, obsSize.z) * 0.25 + 0.001))
+					strength = std::min(1.0, strength * 3.0);
+
+				// Compose avoidance vector (scale by obstacleWeight and boid's maxSpeed)
 				obstacleAvoid += away * (strength * obstacleWeight * maxSpeed);
 				++avoidCount;
 			}
+			// Average avoidance if multiple obstacles
+			if (avoidCount > 0)
+				obstacleAvoid /= static_cast<GLdouble>(avoidCount);
 		}
-		// Average the avoidance force
-		if (avoidCount > 0) obstacleAvoid /= static_cast<GLdouble>(avoidCount);
-	}
-
-	// Tower avoidance
-	Vec3 towerAvoid(Zero);
-	if (gWorldTower && gWorldTower->canCollide())
-	{
-		// Tower position
-		Vec3 towerPos = gWorldTower->getPosition();
-		Vec3 myPos = getPosition();
-
-		// Use squared distance to avoid sqrt for performance
-		GLdouble dx = myPos.x - towerPos.x;
-		GLdouble dz = myPos.z - towerPos.z;
-		GLdouble dist2 = dx * dx + dz * dz;
-
-		// tower radius approximate
-		Vec3 towerSize = gWorldTower->getSize();
-		GLdouble radius = std::max(std::max(towerSize.x, towerSize.z) * 0.5, 1.0);
-		GLdouble threatRadius = radius + separationRadius + safetyPadding;
-
-		if (dist2 > 0.0 && dist2 < threatRadius * threatRadius)
+		// Tower avoidance
+		Vec3 towerAvoid(Zero);
+		if (gWorldTower && gWorldTower->canCollide())
 		{
-			// Calculate distance
-			Vec3 away = { dx, 0.0, dz };
-			normalize(away);
+			Vec3 towerPos = gWorldTower->getPosition();
+			Vec3 myPos = getPosition();
 
-			// Calculate avoidance strength (non-linear)
-			GLdouble dist = std::sqrt(dist2);
-			GLdouble normalized = (threatRadius - dist) / threatRadius;
-			GLdouble strength = normalized * normalized;
+			// Distance in XZ plane
+			GLdouble dx = myPos.x - towerPos.x;
+			GLdouble dz = myPos.z - towerPos.z;
+			GLdouble dist = std::sqrt(dx * dx + dz * dz);
 
-			// Boost strength if very close to tower
-			const GLdouble towerCloseBoost = 3.0;
-			if (dist < radius * 0.5) strength = std::min(1.0, strength * towerCloseBoost);
+			// Radius of tower base
+			Vec3 towerSize = gWorldTower->getSize();
+			GLdouble radius = std::max(std::max(towerSize.x, towerSize.z) * 0.75, 1.0);
 
-			// Apply tower avoidance force
-			const GLdouble towerWeight = obstacleWeight * 1.2;
-			towerAvoid = away * (strength * towerWeight * maxSpeed);
+			// Threat radius
+			GLdouble threatRadius = radius + separationRadius + safetyPadding;
+
+			if (dist > 0.0 && dist < threatRadius)
+			{
+				// Direction away from tower in XZ
+				Vec3 away = { dx, 0.0, dz };
+				normalize(away);
+
+				// Strength based on distance
+				GLdouble normalized = (threatRadius - dist) / threatRadius; // 0..1
+				GLdouble strength = normalized * normalized; // non-linear scaling
+
+				// Boost strength if very close
+				const GLdouble closeBoost = 3.0;
+				if (dist < radius * 0.5)
+					strength = std::min(1.0, strength * closeBoost);
+
+				const GLdouble towerWeight = obstacleWeight * 1.8; // Stronger weight for tower
+				towerAvoid = away * (strength * towerWeight * maxSpeed);
+			}
 		}
-	}
-
-	// Leader following
-	Vec3 leaderAttract(Zero);
-	if (leaderBoid)
-	{
-		// Positions
-		Vec3 myPos = getPosition();
-		Vec3 leaderPos = leaderBoid->getPosition();
-
-		// Direction the leader is facing
-		GLdouble leaderYaw = leaderBoid->getYaw() * (PI / 180.0);
-		Vec3 leaderForward = { std::sin(leaderYaw), 0.0, std::cos(leaderYaw) };
-		normalize(leaderForward);
-
-		// Desired follow distance based on leader speed	
-		const GLdouble baseFollowDist = 1.0;
-
-		// Leader speed
-		Vec3 leaderVel = leaderBoid->getVelocity();
-		GLdouble leaderSpeed = length(leaderVel);
-		GLdouble followDist = baseFollowDist + leaderSpeed * 0.5;
-
-		// Calculate follow target position behind the leader
-		Vec3 followTarget = leaderPos - leaderForward * followDist;
-
-		// Vector from boid to follow target
-		Vec3 toTarget = followTarget - myPos;
-
-		// Horizontal distance and vertical distance
-		GLdouble horizDist = std::sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z);
-		GLdouble vertDist = toTarget.y;
-		Vec3 horizSteer = Zero;
-		if (horizDist > 0.001)
+		// Leader following
+		Vec3 leaderAttract(Zero);
+		if (leaderBoid)
 		{
-			Vec3 toTargetXZ = { toTarget.x, 0.0, toTarget.z };
-			normalize(toTargetXZ);
-			Vec3 desiredXZ = toTargetXZ * maxSpeed;
-			horizSteer.x = desiredXZ.x - getVelocity().x;
-			horizSteer.z = desiredXZ.z - getVelocity().z;
-			// limit per-component via limit on vector
-			limit(horizSteer, maxForce);
+			Vec3 myPos = getPosition();
+			Vec3 leaderPos = leaderBoid->getPosition();
+
+			// Vector to leader
+			Vec3 toLeader = leaderPos - myPos;
+			GLdouble dist = length(toLeader);
+
+			// Only attract if beyond a small threshold
+			if (dist > 0.001)
+			{
+				normalize(toLeader);
+				Vec3 desired = toLeader * maxSpeed;
+				leaderAttract = desired - getVelocity();
+				limit(leaderAttract, maxForce);
+			}
 		}
+		// Sum forces and limit
+		Vec3 steer = cohesion + separation + alignment + obstacleAvoid + towerAvoid + leaderAttract;
+		limit(steer, maxForce);
 
-		// Compute vertical steering: proportional to vertical distance, smoothed
-		// verticalGain controls how responsive boids follow height changes
-		const GLdouble verticalGain = 0.8; // ajuste conforme necessário
-		GLdouble desiredVy = std::min(std::max(vertDist * verticalGain, -maxSpeed), maxSpeed);
-		GLdouble steerVy = desiredVy - getVelocity().y;
-
-		// Combine horizontal and vertical steering
-		Vec3 steerLeader = { horizSteer.x, steerVy, horizSteer.z };
-
-		// Weight and influence falloff
-		const GLdouble leaderWeight = 1.5;
-		const GLdouble leaderInfluenceRadius = 500.0;
-		GLdouble influence = 1.0;
-		if (horizDist > leaderInfluenceRadius) influence = 0.0;
-		else influence = 1.0 - (horizDist / leaderInfluenceRadius);
-
-		leaderAttract = steerLeader * (leaderWeight * influence);
+		// Update velocity
+		Vec3 newVel = getVelocity() + steer * dt;
+		limit(newVel, maxSpeed);
+		setVelocity(newVel);
 	}
-	// Combine all steering forces
-	Vec3 steer = cohesion + separation + alignment + obstacleAvoid + towerAvoid + leaderAttract;
-	// allow y from leaderAttract; other components already zeroed
-	limit(steer, maxForce);
-
-	// Update velocity
-	Vec3 newVel = getVelocity() + steer * dt;
-	// Clamp vertical speed to reasonable range
-	newVel.y = std::min(std::max(newVel.y, -maxSpeed * 0.5), maxSpeed * 0.5);
-	limit(newVel, maxSpeed);
-	setVelocity(newVel);
 }
 
 // Draw the boid
@@ -237,12 +242,28 @@ void Boid::draw()
 	auto rotation = getRotation();
 	auto size = getSize();
 
-	auto frontColor = getFrontColor();
-	auto bodyColor = getBodyColor();
-	auto wingColor = getWingColor();
-	auto wireColor = getWireColor();
+	// Determine yaw based on velocity
+	Vec3 v = getVelocity();
+	GLdouble speed = length(v);
+	if (speed > 1e-6)
+		yaw = std::atan2(v.x, v.z) * (180.0 / PI);
 
-	yaw = std::atan2(getVelocity().x, getVelocity().z) * (180.0 / PI);
+	// Wing flap angle
+	GLdouble flapDeg = wingAmplitude * std::sin(wingAngle);
+
+	// Dimensions derived from size
+	GLdouble noseLength = size.z * 0.6;
+	GLdouble noseRadius = size.x * 0.25;
+
+	GLdouble bodyLength = size.z * 1.2;
+	GLdouble bodyRadius = size.x * 0.3;
+
+	GLdouble tailLength = size.z * 0.5;
+	GLdouble tailRadius = size.x * 0.15;
+
+	GLdouble wingSpan = size.x * 0.9;
+	GLdouble wingChord = size.z * 0.6;
+	GLdouble wingThickness = size.y * 0.12;
 
 	// Transformations
 	glPushMatrix();
@@ -251,38 +272,63 @@ void Boid::draw()
 	glRotated(rotation.y + yaw, 0.0, 1.0, 0.0);
 	glRotated(rotation.z, 0.0, 0.0, 1.0);
 
-	// Front cone
-	glScaled(size.x, size.y, size.z);
+	// --- NOSE ---
+	glPushMatrix();
+	glTranslated(0.0, 0.0, noseLength * 0.5);
+	glScaled(noseRadius, noseRadius, noseLength);
 	glColor3d(frontColor.x, frontColor.y, frontColor.z);
-	glutSolidCone(1.0, 1.0, 6, 1);
+	glutSolidCone(1.0, 1.0, 8, 1);
 	glColor3d(wireColor.x, wireColor.y, wireColor.z);
-	glutWireCone(1.0, 1.0, 6, 1);
+	glutWireCone(1.0, 1.0, 8, 1);
+	glPopMatrix();
 
-	// Body
-	glRotated(180.0, 1.0, 0.0, 0.0);
+	// --- BODY ---
+	glPushMatrix();
+	glScaled(bodyRadius, bodyRadius, bodyLength * 0.5);
 	glColor3d(bodyColor.x, bodyColor.y, bodyColor.z);
-	glutSolidCone(1.0, 2.0, 6, 1);
+	glutSolidSphere(1.0, 8, 8);
 	glColor3d(wireColor.x, wireColor.y, wireColor.z);
-	glutWireCone(1.0, 2.0, 6, 1);
+	glutWireSphere(1.0, 8, 8);
+	glPopMatrix();
 
-	// Wings
-	glTranslated(0.0, 0.0, size.z);
-	glRotated(180.0, 1.0, 0.0, 0.0);
-	glScaled(1.0, 0.5, 1.0);
+	// --- TAIL ---
+	glPushMatrix();
+	glTranslated(0.0, 0.0, -bodyLength * 0.8);
+	glScaled(tailRadius, tailRadius, tailLength);
 	glColor3d(wingColor.x, wingColor.y, wingColor.z);
-	glutSolidCone(2.0, 1.0, 6, 1);
+	glutSolidCone(1.0, 1.0, 8, 1);
 	glColor3d(wireColor.x, wireColor.y, wireColor.z);
-	glutWireCone(2.0, 1.0, 6, 1);
+	glutWireCone(1.0, 1.0, 8, 1);
+	glPopMatrix();
 
-	// Tail
-	glTranslated(0.0, 0.0, -size.z * 3.0);
+	// --- LEFT WING ---
+	glPushMatrix();
+	glTranslated(wingSpan * 0.5, 0.0, 0.0);
+	glRotated(flapDeg, 0.0, 0.0, 1.0);
+	glTranslated(wingChord * 0.25, 0.0, -wingChord * 0.25);
+	glScaled(wingSpan, wingThickness, wingChord);
 	glColor3d(wingColor.x, wingColor.y, wingColor.z);
-	glutSolidCone(0.5, 1.0, 6, 1);
+	glutSolidCube(1.0);
 	glColor3d(wireColor.x, wireColor.y, wireColor.z);
-	glutWireCone(0.5, 1.0, 6, 1);
+	glutWireCube(1.0);
+	glPopMatrix();
+
+	// --- RIGHT WING ---
+	glPushMatrix();
+	glTranslated(-wingSpan * 0.5, 0.0, 0.0);
+	glRotated(-flapDeg, 0.0, 0.0, 1.0);
+	glTranslated(-wingChord * 0.25, 0.0, -wingChord * 0.25);
+	glScaled(wingSpan, wingThickness, wingChord);
+	glColor3d(wingColor.x, wingColor.y, wingColor.z);
+	glutSolidCube(1.0);
+	glColor3d(wireColor.x, wireColor.y, wireColor.z);
+	glutWireCube(1.0);
+	glPopMatrix();
+
 	glPopMatrix();
 }
 
+// Set body colors
 void Boid::setColors(const Vec3 front, const Vec3 body, const Vec3 wing)
 {
 	frontColor = front;
@@ -301,7 +347,8 @@ void Boid::flock(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry
 		if (b == this) continue; // Skip self
 		const Vec3 otherPos = b->getPosition();
 		// distance in XZ plane
-		GLdouble dx = otherPos.x - pos.x, dz = otherPos.z - pos.z;
+		GLdouble dx = otherPos.x - pos.x;
+		GLdouble dz = otherPos.z - pos.z;
 		GLdouble d2 = dx * dx + dz * dz;
 		if (d2 > 0.0 && d2 < neighRadius * neighRadius) {
 			center.x += otherPos.x;
@@ -342,7 +389,8 @@ void Boid::separate(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble&
 	{
 		if (b == this) continue; // Skip self
 		auto otherPos = b->getPosition();
-		GLdouble dx = pos.x - otherPos.x, dz = pos.z - otherPos.z;
+		GLdouble dx = pos.x - otherPos.x;
+		GLdouble dz = pos.z - otherPos.z;
 		GLdouble d2 = dx * dx + dz * dz;
 		if (d2 > 0.0 && d2 < separationRadius * separationRadius)
 		{
@@ -382,7 +430,8 @@ void Boid::align(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry
 		if (b == this) continue; // Skip self
 		auto otherPos = b->getPosition();
 		auto otherVel = b->getVelocity();
-		GLdouble dx = otherPos.x - getPosition().x, dz = otherPos.z - getPosition().z;
+		GLdouble dx = otherPos.x - getPosition().x;
+		GLdouble dz = otherPos.z - getPosition().z;
 		GLdouble d2 = dx * dx + dz * dz;
 		if (d2 > 0.0 && d2 < neighRadius * neighRadius)
 		{
@@ -405,7 +454,6 @@ void Boid::align(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry
 
 	// Steering force
 	Vec3 steer = avgVelocity - getVelocity();
-	steer.y = 0.0; // Keep y-component zero
 	limit(steer, maxForce);
-	rx = steer.x, ry = steer.y, rz = steer.z;
+	rx = steer.x, ry = 0.0, rz = steer.z;
 }

@@ -22,7 +22,7 @@ static Camera* sFixedCamera = nullptr;
 static Camera* sSideCamera = nullptr;
 
 // Camera parameters
-static const GLdouble CAMERA_MIN_DISTANCE = 20.0;
+static const GLdouble CAMERA_MIN_DISTANCE = 5.0;
 static const GLdouble CAMERA_MAX_DISTANCE = 150.0;
 static const GLdouble CAMERA_SMOOTH_SPEED = 6.0;
 static const GLdouble CAMERA_ZOOM_STEP = 1.5;

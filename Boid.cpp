@@ -1,5 +1,6 @@
 #include <GL/glut.h>
 #include <cmath>
+#include <random>
 
 #include "vecFunctions.h"
 #include "Boid.h"
@@ -18,6 +19,11 @@ Boid::Boid()
 	setVelocity(Zero);
 	setSize(0.5, 0.5, 0.5);
 	setColors(Color::Red, Color::Orange, Color::Yellow);
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<GLdouble> dist(0.0, 2.0 * PI);
+	wingAngle = dist(gen);
 }
 
 Boid::Boid(const Vec3 pos, ControlledBoid* leader) : Boid()

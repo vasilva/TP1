@@ -1,9 +1,34 @@
-#include <string>
-#include <vector>
+#include <GL/glut.h>
 #include <sstream>
 
 #include "HUD.h"
 #include "vecFunctions.h"
+#include <algorithm>
+
+// Prepare HUD lines with control instructions
+std::vector<std::string> prepareHUDLines()
+{
+	std::vector<std::string> hudLines;
+
+	// Control instructions
+	hudLines.push_back("");
+	hudLines.push_back("Controls:");
+	hudLines.push_back("Arrow Keys/WASD: Control Boid Leader");
+	hudLines.push_back("+/-: Add/Remove Boids");
+	hudLines.push_back("Z: Stop Boid Leader");
+	hudLines.push_back("Q/E: Increase/Decrease Height");
+	hudLines.push_back("O/P: Add/Remove Obstacle");
+	hudLines.push_back("R: Reset Obstacles");
+	hudLines.push_back("Mouse Wheel: Zoom In/Out");
+	hudLines.push_back("1/2/3: Switch Camera (Follow/Fixed/Side)");
+	hudLines.push_back("F: Toggle Fullscreen");
+	hudLines.push_back("Space: Pause/Unpause Simulation");
+	hudLines.push_back("Esc: Exit");
+
+	// Reverse order for bottom-up drawing
+	std::reverse(hudLines.begin(), hudLines.end());
+	return hudLines;
+}
 
 // Draw text on the screen at specified (x, y) position
 static void drawText(const std::string& text)
@@ -13,7 +38,7 @@ static void drawText(const std::string& text)
 }
 
 // Draw Heads-Up Display (HUD) with controls information
-void drawHUD(int boidCount)
+void drawHUD(int boidCount, int obstacleCount, std::vector<std::string>& hudLines)
 {
 	// Save current OpenGL state
 	glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_CURRENT_BIT);
@@ -42,34 +67,19 @@ void drawHUD(int boidCount)
 	// HUD text lines
 	const int margin = 10;
 	const int lineHeight = 20;
-	std::vector<std::string> hudLines;
 
-	// Line with boid count
-	std::ostringstream oss;
-	oss << "Boid Count: " << boidCount;
+	// Add boid and obstacle counts to HUD lines
+	std::stringstream oss;
+	oss << "Obstacles: " << obstacleCount;
+	hudLines.push_back(oss.str());
+	
+	oss.str("");
+	oss << "Boids: " << boidCount;
 	hudLines.push_back(oss.str());
 
-	// Control instructions
-	hudLines.push_back("");
-	hudLines.push_back("Controles:");
-	hudLines.push_back("Arrow Keys: Turn/Move Controlled Boid");
-	hudLines.push_back("WASD: Move Controlled Boid");
-	hudLines.push_back("+/-: Add/Remove Boids");
-	hudLines.push_back("1: Follow Camera");
-	hudLines.push_back("2: Fixed Camera");
-	hudLines.push_back("3: Side Camera");
-	hudLines.push_back("Z: Stop Controlled Boid");
-	hudLines.push_back("Q/E: Increase/Decrease Height");
-	hudLines.push_back("Mouse Wheel: Zoom In/Out");
-	hudLines.push_back("F: Toggle Fullscreen");
-	hudLines.push_back("Esc: Exit");
-
-	// Reverse order for bottom-up drawing
-	std::reverse(hudLines.begin(), hudLines.end());
-
-	// Draw shadow
-	glColor3d(shadowColor.x, shadowColor.y, shadowColor.z);
-	for (int i = 0; i < hudLines.size(); ++i)
+	// Draw each HUD line
+	int lineCount = static_cast<int>(hudLines.size());
+	for (int i = 0; i < lineCount; ++i)
 	{
 		int x = margin, y = margin + i * lineHeight;
 
@@ -77,14 +87,66 @@ void drawHUD(int boidCount)
 		glColor3d(shadowColor.x, shadowColor.y, shadowColor.z);
 		glRasterPos2i(x + 1, y - 1);
 		drawText(hudLines[i]);
+
 		// Draw main text
 		glColor3d(textColor.x, textColor.y, textColor.z);
 		glRasterPos2i(x, y);
 		drawText(hudLines[i]);
 	}
-	
+	// Remove the last two lines (boid and obstacle counts) for next frame
+	hudLines.pop_back();
+	hudLines.pop_back();
+
 	// Restore previous OpenGL state
 	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glPopAttrib();
+	glMatrixMode(GL_MODELVIEW);
+}
+
+// Draw "PAUSED" text at the center of the screen
+void drawPausedText()
+{
+	// Save current OpenGL state
+	glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_CURRENT_BIT);
+	glDisable(GL_LIGHTING);
+	glDisable(GL_DEPTH_TEST);
+
+	// Set up orthographic projection for 2D text
+	int w = glutGet(GLUT_WINDOW_WIDTH);
+	int h = glutGet(GLUT_WINDOW_HEIGHT);
+
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glOrtho(0, w, 0, h, -1, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	// Draw "PAUSED" text at center
+	std::string pauseText = "PAUSED";
+	int x = w / 2 - (pauseText.length() * 9);
+	int y = h / 2;
+	
+	// Draw shadow
+	auto color = Color::Black;
+	glColor3d(color.x, color.y, color.z);
+	glRasterPos2i(x + 2, y - 2);
+	for (char c : pauseText)
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+
+	// Draw main text
+	color = Color::Yellow;
+	glColor3d(color.x, color.y, color.z);
+	glRasterPos2i(x, y);
+	for (char c : pauseText)
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+
+	// Restore previous OpenGL state
 	glPopMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();

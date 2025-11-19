@@ -7,33 +7,37 @@ static const GLdouble PI = 3.14159265358979323846;
 // 3D Vector
 struct Vec3
 {
+	// Components
 	GLdouble x;
 	GLdouble y;
 	GLdouble z;
 
+	// Constructors
 	Vec3() : x(0.0), y(0.0), z(0.0) {}
-	Vec3(GLdouble x, GLdouble y, GLdouble z)
-		: x(x), y(y), z(z) {
-	}
+	Vec3(GLdouble x, GLdouble y, GLdouble z) : x(x), y(y), z(z) {}
 };
 
-// Consts
+// Common vectors
 const Vec3 Zero(0.0, 0.0, 0.0);
 const Vec3 UnitX(1.0, 0.0, 0.0);
 const Vec3 UnitY(0.0, 1.0, 0.0);
 const Vec3 UnitZ(0.0, 0.0, 1.0);
 
-// Vector operations for 3D vectors
+/* Vector operations for 3D vectors */
+
+// Length squared of vector
 inline GLdouble length2(const Vec3& v)
 {
 	return v.x * v.x + v.y * v.y + v.z * v.z;
 }
 
+// Length of vector
 inline GLdouble length(const Vec3& v)
 {
 	return std::sqrt(length2(v));
 }
 
+// Cross product of two vectors
 inline Vec3 crossProduct(const Vec3& a, const Vec3& b)
 {
 	return Vec3{
@@ -43,10 +47,13 @@ inline Vec3 crossProduct(const Vec3& a, const Vec3& b)
 	};
 }
 
+// Dot product of two vectors
 inline GLdouble dotProduct(const Vec3& a, const Vec3& b)
 {
 	return a.x * b.x + a.y * b.y + a.z * b.z;
 }
+
+/* Operator overloads for Vec3 */
 
 inline Vec3 operator+(const Vec3& a, const Vec3& b)
 {
@@ -100,6 +107,7 @@ inline Vec3& operator/=(Vec3& v, GLdouble scalar)
 	return v;
 }
 
+// Normalize vector to unit length
 inline void normalize(Vec3& v)
 {
 	GLdouble len = length(v);
@@ -107,6 +115,7 @@ inline void normalize(Vec3& v)
 		v /= len;
 }
 
+// Limit vector length to max
 inline void limit(Vec3& v, GLdouble max)
 {
 	GLdouble len2 = length2(v);
@@ -117,6 +126,7 @@ inline void limit(Vec3& v, GLdouble max)
 	}
 }
 
+// Linear interpolation between two vectors
 inline Vec3 lerp(const Vec3& a, const Vec3& b, GLdouble alpha)
 {
 	return a + (b - a) * alpha;

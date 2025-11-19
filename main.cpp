@@ -1,6 +1,6 @@
 #include <GL\glut.h>
 #include <vector>
-#include <random>
+
 #include "glut_callback.h"
 #include "Camera.h"
 #include "Tower.h"
@@ -8,6 +8,9 @@
 #include "Obstacle.h"
 #include "Flock.h"
 #include "ControlledBoid.h"
+#include "ObstacleManager.h"
+#include "vecFunctions.h"
+#include "World.h"
 
 // Lighting parameters
 const GLfloat light_ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };		// Ambient light
@@ -21,41 +24,6 @@ const GLfloat mat_diffuse[] = { 0.7f, 0.7f, 0.7f, 1.0f };  // Material diffuse r
 const GLfloat mat_specular[] = { 0.2f, 0.2f, 0.2f, 1.0f }; // Material specular reflectance
 const GLfloat high_shininess[] = { 30.0f };
 
-// Function to create random walls (obstacles) on the floor
-static void makeWalls(std::vector<Obstacle>& walls, const Floor& floor, int obstacleCount)
-{
-	auto floorSize = floor.getSize();
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_real_distribution<GLdouble> distPos(-floorSize.x * 0.5, floorSize.z * 0.5);
-	std::uniform_real_distribution<GLdouble> distSize(5.0, 30.0);
-
-	if (obstacleCount <= 0)
-		obstacleCount = 50; // Default number of obstacles
-	if (obstacleCount > 200)
-		obstacleCount = 200; // Max limit
-
-	for (int i = 0; i < obstacleCount; ++i)
-	{
-		// Random size
-		GLdouble s = distSize(gen);
-		Vec3 size = { s, s * 2.0, distSize(gen) };
-
-		// Random position
-		// Ensure obstacles are not too close to the center
-		GLdouble px, pz;
-		px = distPos(gen);
-		pz = distPos(gen);
-
-		if (std::abs(px) < 20.0) px += (px >= 0.0) ? 20.0 : -20.0;
-		if (std::abs(pz) < 20.0) pz += (pz >= 0.0) ? 20.0 : -20.0;
-
-		Vec3 pos = { px, size.y * 0.5, pz };
-		walls.emplace_back(pos, size);
-		walls.back().enableCollision();
-	}
-}
-
 int main(int argc, char* argv[]) {
 
 	// Initialize GLUT
@@ -66,7 +34,7 @@ int main(int argc, char* argv[]) {
 	glutCreateWindow("TP1 - boids");
 	glutFullScreen();
 
-	Vec3 backgroundColor(0.3, 0.9, 0.9); // Cyan background
+	Vec3 backgroundColor = Color::Cyan;
 	glClearColor(static_cast<GLfloat>(backgroundColor.x),
 		static_cast<GLfloat>(backgroundColor.y),
 		static_cast<GLfloat>(backgroundColor.z),
@@ -80,23 +48,24 @@ int main(int argc, char* argv[]) {
 	// Create floor
 	Floor floor;
 	floor.setPosition(Zero);
-	floor.setSize(1000.0, 1.0, 1000.0);
 	floor.setRotation(Zero);
+	floor.setSize(1000.0, 1.0, 1000.0);
 	auto floorSize = floor.getSize();
 
 	// Create tower at the center of the floor
 	Tower tower;
 	tower.setPosition(Zero);
-	tower.setSize(10.0, 100.0, 10.0);
 	tower.setRotation(UnitX * -90.0);
+	tower.setSize(10.0, 100.0, 10.0);
 	gWorldTower = &tower;
 
 	// Create several obstacles scattered over the floor
 	std::vector<Obstacle> walls;
-	gWorldObstacles = &walls;
-	makeWalls(walls, floor, 100);
+	ObstacleManager obstacleManager;
+	obstacleManager.setFloor(floor);
+	obstacleManager.generateRandom(floor, 100);
 
-	// Initialize flock
+	// Create and initialize flock
 	Flock flock;
 	flock.init(50, &controlledBoid, floorSize.x * 0.2);
 
@@ -107,7 +76,8 @@ int main(int argc, char* argv[]) {
 	registerWorldObjects(
 		followCamera, fixedCamera, sideCamera,
 		flock, controlledBoid,
-		floor, tower, walls);
+		floor, tower);
+	registerObstacleManager(obstacleManager);
 	glutReshapeFunc(reshape);
 	glutDisplayFunc(display);
 	glutIdleFunc(idle);
@@ -143,5 +113,5 @@ int main(int argc, char* argv[]) {
 
 	// Start GLUT main loop
 	glutMainLoop();
-	return EXIT_SUCCESS;
+	return 0;
 }

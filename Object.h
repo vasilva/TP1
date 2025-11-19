@@ -44,9 +44,9 @@ public:
 
 private:
 	// Transformation attributes
-	Vec3 position;	// Position in 3D space
+	Vec3 position;	// Position vector (x, y, z)
 	Vec3 rotation;	// Rotation angles (pitch, yaw, roll)
-	Vec3 velocity;	// Velocity vector
+	Vec3 velocity;	// Velocity vector (vx, vy, vz)
 	Vec3 size;		// Size dimensions (width, height, depth)
 
 	bool hasCollider; // Collision flag

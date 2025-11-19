@@ -3,6 +3,8 @@
 #include <GL/glut.h>
 #include <algorithm>
 #include <vector>
+#include <string>
+#include <cmath>
 
 #include "Tower.h"
 #include "Floor.h"
@@ -13,6 +15,7 @@
 #include "World.h"
 #include "vecFunctions.h"
 #include "HUD.h"
+#include "ObstacleManager.h"
 
 /* GLUT callback Handlers variables */
 
@@ -38,10 +41,13 @@ static Floor* sFloor = nullptr;
 static Tower* sTower = nullptr;
 static ControlledBoid* sControlledBoid = nullptr;
 static std::vector<Obstacle>* sWalls = nullptr;
+static ObstacleManager* sObstacleManager = nullptr;
 
 // Time tracking
 static GLdouble sLastTime = 0.0;
 static bool sFullscreen = true;
+static bool sPaused = false;
+static std::vector<std::string> sHUDLines = prepareHUDLines();
 
 /* GLUT callback Handlers */
 
@@ -61,19 +67,21 @@ static void display(void)
 	// Clear the color and depth buffers
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Update boids
-	if (sControlledBoid) sControlledBoid->update(dt);
-	if (sFlock) sFlock->update(dt);
+	// Update boids if not paused
+	if (!sPaused && sControlledBoid) sControlledBoid->update(dt);
+	if (!sPaused && sFlock) sFlock->update(dt);
 
 	// Get positions and sizes
 	Vec3 cbPos, towerPos, towerSize;
 	if (sControlledBoid)
 		cbPos = sControlledBoid->getPosition();
+
 	if (sTower)
 	{
 		towerPos = sTower->getPosition();
 		towerSize = sTower->getSize();
 	}
+
 	Vec3 flockCenter = sFlock ? sFlock->getAvgPosition() : cbPos;
 	Vec3 desiredPos, desiredTarget, currPos, currTarget, smoothPos, smoothTarget;
 	Vec3 offset, forwardDir, rightCamPos, right;
@@ -170,7 +178,12 @@ static void display(void)
 			w.draw();
 
 	// Draw HUD overlay
-	drawHUD(sFlock ? sFlock->getBoidCount() : 0);
+	int boidCount = sFlock ? sFlock->getBoidCount() : 0;
+	int obstacleCount = sObstacleManager ? sObstacleManager->size() : 0;
+	drawHUD(boidCount, obstacleCount, sHUDLines);
+
+	// Render paused text if simulation is paused
+	if (sPaused) drawPausedText();
 
 	// Swap buffers for animation
 	glutSwapBuffers();
@@ -235,6 +248,11 @@ static void keyboardControl(unsigned char key, int x, int y)
 		}
 		break;
 
+
+	case ' ': // Pause/unpause simulation
+		sPaused = !sPaused;
+		break;
+
 	case 'z': case 'Z': // Stop movement
 		sControlledBoid->stop();
 		break;
@@ -243,7 +261,7 @@ static void keyboardControl(unsigned char key, int x, int y)
 		if (sFullscreen)
 		{
 			glutPositionWindow(0, 0);
-			glutReshapeWindow(1280, 720);
+			glutReshapeWindow(1920, 1080);
 			sFullscreen = false;
 		}
 		else
@@ -251,6 +269,18 @@ static void keyboardControl(unsigned char key, int x, int y)
 			glutFullScreen();
 			sFullscreen = true;
 		}
+		break;
+
+		// Obstacle management
+	case 'o': case 'O': // Add obstacle
+		if (sObstacleManager) sObstacleManager->addObstacle();
+		break;
+	case 'p': case 'P': // Remove obstacle
+		if (sObstacleManager) sObstacleManager->removeObstacle();
+		break;
+	case 'r': case 'R': // Reset obstacles
+		if (sObstacleManager && sFloor) sObstacleManager->reset();
+		break;
 
 		// Camera switching
 	case '1': sCurrentCamera = FOLLOW_CAMERA; break;
@@ -328,8 +358,7 @@ static void idle(void) { glutPostRedisplay(); }
 void registerWorldObjects(
 	Camera& followCamera, Camera& fixedCamera, Camera& sideCamera,
 	Flock& flock, ControlledBoid& controlledBoid,
-	Floor& floor, Tower& tower,
-	std::vector<Obstacle>& walls)
+	Floor& floor, Tower& tower)
 {
 	sFollowCamera = &followCamera;
 	sFixedCamera = &fixedCamera;
@@ -338,7 +367,13 @@ void registerWorldObjects(
 	sControlledBoid = &controlledBoid;
 	sFloor = &floor;
 	sTower = &tower;
-	sWalls = &walls;
+}
+
+static void registerObstacleManager(ObstacleManager& mgr)
+{
+	sObstacleManager = &mgr;
+	sWalls = &mgr.getObstacles();
+	gWorldObstacles = sWalls;
 }
 
 /* End of GLUT callback Handlers */

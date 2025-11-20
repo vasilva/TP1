@@ -6,8 +6,9 @@
 #include "Boid.h"
 #include "World.h"
 #include "ControlledBoid.h"
-#include "Obstacle.h"
 #include "Tower.h"
+#include "Obstacle.h"
+#include "Shadow.h"
 
 Boid::Boid()
 	: maxSpeed(50.0), maxForce(40.0), yaw(0.0),
@@ -24,6 +25,16 @@ Boid::Boid()
 	std::mt19937 gen(rd());
 	std::uniform_real_distribution<GLdouble> dist(0.0, 2.0 * PI);
 	wingAngle = dist(gen);
+
+	auto size = getSize();
+
+	noseLength = size.z * 0.6, noseRadius = size.x * 0.25;
+	bodyLength = size.z * 1.2, bodyRadius = size.x * 0.3;
+	tailLength = size.z * 0.5, tailRadius = size.x * 0.15;
+
+	wingSpan = size.x * 0.9;
+	wingChord = size.z * 0.6;
+	wingThickness = size.y * 0.05;
 }
 
 Boid::Boid(const Vec3 pos, ControlledBoid* leader) : Boid()
@@ -241,35 +252,96 @@ void Boid::applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt)
 	}
 }
 
-// Draw the boid
-void Boid::draw()
+void Boid::drawGeometry(bool useColor) const
 {
-	auto pos = getPosition();
-	auto rotation = getRotation();
-	auto size = getSize();
-
-	// Determine yaw based on velocity
-	Vec3 v = getVelocity();
-	GLdouble speed = length(v);
-	if (speed > 1e-6)
-		yaw = std::atan2(v.x, v.z) * (180.0 / PI);
-
-	// Wing flap angle
 	GLdouble flapDeg = wingAmplitude * std::sin(wingAngle);
 
-	// Dimensions derived from size
-	GLdouble noseLength = size.z * 0.6;
-	GLdouble noseRadius = size.x * 0.25;
+	// --- NOSE ---
+	glPushMatrix();
+	if (useColor) glColor3d(frontColor.x, frontColor.y, frontColor.z);
+	glTranslated(0.0, 0.0, noseLength * 0.5);
+	glScaled(noseRadius, noseRadius, noseLength);
+	glutSolidCone(1.0, 1.0, 8, 1);
+	glPopMatrix();
 
-	GLdouble bodyLength = size.z * 1.2;
-	GLdouble bodyRadius = size.x * 0.3;
+	// --- BODY ---
+	glPushMatrix();
+	if (useColor) glColor3d(bodyColor.x, bodyColor.y, bodyColor.z);
+	glScaled(bodyRadius, bodyRadius, bodyLength * 0.5);
+	glutSolidSphere(1.0, 8, 8);
+	glPopMatrix();
 
-	GLdouble tailLength = size.z * 0.5;
-	GLdouble tailRadius = size.x * 0.15;
+	// --- TAIL ---
+	glPushMatrix();
+	if (useColor) glColor3d(frontColor.x, frontColor.y, frontColor.z);
+	glTranslated(0.0, 0.0, -bodyLength * 0.8);
+	glScaled(tailRadius, tailRadius, tailLength);
+	glutSolidCone(1.0, 1.0, 8, 1);
+	glPopMatrix();
 
-	GLdouble wingSpan = size.x * 0.9;
-	GLdouble wingChord = size.z * 0.6;
-	GLdouble wingThickness = size.y * 0.12;
+	// --- LEFT WING ---
+	glPushMatrix();
+	if (useColor) glColor3d(wingColor.x, wingColor.y, wingColor.z);
+	glTranslated(wingSpan * 0.55, 0.0, 0.05);
+	glRotated(flapDeg, 0.0, 0.0, 1.0);
+	glTranslated(wingChord * 0.25, 0.0, -wingChord * 0.25);
+	glScaled(wingSpan, wingThickness, wingChord);
+	glutSolidCube(1.0);
+	glPopMatrix();
+
+	// --- RIGHT WING ---
+	glPushMatrix();
+	if (useColor) glColor3d(wingColor.x, wingColor.y, wingColor.z);
+	glTranslated(-wingSpan * 0.55, 0.0, 0.05);
+	glRotated(-flapDeg, 0.0, 0.0, 1.0);
+	glTranslated(-wingChord * 0.25, 0.0, -wingChord * 0.25);
+	glScaled(wingSpan, wingThickness, wingChord);
+	glutSolidCube(1.0);
+	glPopMatrix();
+}
+
+void Boid::drawShadow()
+{
+	// Get shadow matrix
+	GLfloat plane[4] = { 0.0f, 1.0f, 0.0f, 0.0f }; // Ground plane y=0
+	GLfloat light[4] = { 0.0f, 1000.0f, 10.0f, 1.0f }; // Positional light
+	GLfloat S[16];
+	computeShadowMatrix(S, plane, light);
+
+	// Attributes for shadow
+	glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glDisable(GL_LIGHTING);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDepthMask(GL_FALSE);
+	glColor4f(0.0f, 0.0f, 0.0f, 0.9f);
+
+	auto pos = getPosition();
+	auto rotation = getRotation();
+
+	// Apply shadow matrix and draw
+	glPushMatrix();
+	glMultMatrixf(S);
+	glTranslated(pos.x, pos.y, pos.z);
+	glRotated(rotation.x, 1.0, 0.0, 0.0);
+	glRotated(rotation.y + yaw, 0.0, 1.0, 0.0);
+	glRotated(rotation.z, 0.0, 0.0, 1.0);
+	drawGeometry(false);
+	glPopMatrix();
+
+	// Restore state
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
+	glEnable(GL_LIGHTING);
+	glPopAttrib();
+}
+
+void Boid::drawBody()
+{
+	// Get position and rotation
+	auto pos = getPosition();
+	auto rotation = getRotation();
+	GLdouble flapDeg = wingAmplitude * std::sin(wingAngle);
 
 	// Transformations
 	glPushMatrix();
@@ -278,60 +350,70 @@ void Boid::draw()
 	glRotated(rotation.y + yaw, 0.0, 1.0, 0.0);
 	glRotated(rotation.z, 0.0, 0.0, 1.0);
 
-	// --- NOSE ---
+	// Draw geometry with colors
+	drawGeometry(true);
+
+	// Draw wireframe overlay
+	glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
+	glDisable(GL_LIGHTING);
+	glColor3d(wireColor.x, wireColor.y, wireColor.z);
+
+	// Wire nose
 	glPushMatrix();
 	glTranslated(0.0, 0.0, noseLength * 0.5);
 	glScaled(noseRadius, noseRadius, noseLength);
-	glColor3d(frontColor.x, frontColor.y, frontColor.z);
-	glutSolidCone(1.0, 1.0, 8, 1);
-	glColor3d(wireColor.x, wireColor.y, wireColor.z);
 	glutWireCone(1.0, 1.0, 8, 1);
 	glPopMatrix();
 
-	// --- BODY ---
+	// Wire body
 	glPushMatrix();
 	glScaled(bodyRadius, bodyRadius, bodyLength * 0.5);
-	glColor3d(bodyColor.x, bodyColor.y, bodyColor.z);
-	glutSolidSphere(1.0, 8, 8);
-	glColor3d(wireColor.x, wireColor.y, wireColor.z);
 	glutWireSphere(1.0, 8, 8);
 	glPopMatrix();
 
-	// --- TAIL ---
+	// Wire tail
 	glPushMatrix();
 	glTranslated(0.0, 0.0, -bodyLength * 0.8);
 	glScaled(tailRadius, tailRadius, tailLength);
-	glColor3d(wingColor.x, wingColor.y, wingColor.z);
-	glutSolidCone(1.0, 1.0, 8, 1);
-	glColor3d(wireColor.x, wireColor.y, wireColor.z);
 	glutWireCone(1.0, 1.0, 8, 1);
 	glPopMatrix();
 
-	// --- LEFT WING ---
+	// Wire left wing
 	glPushMatrix();
-	glTranslated(wingSpan * 0.5, 0.0, 0.0);
+	glTranslated(wingSpan * 0.55, 0.0, 0.05);
 	glRotated(flapDeg, 0.0, 0.0, 1.0);
 	glTranslated(wingChord * 0.25, 0.0, -wingChord * 0.25);
 	glScaled(wingSpan, wingThickness, wingChord);
-	glColor3d(wingColor.x, wingColor.y, wingColor.z);
-	glutSolidCube(1.0);
-	glColor3d(wireColor.x, wireColor.y, wireColor.z);
 	glutWireCube(1.0);
 	glPopMatrix();
 
-	// --- RIGHT WING ---
+	// Wire right wing
 	glPushMatrix();
-	glTranslated(-wingSpan * 0.5, 0.0, 0.0);
+	glTranslated(-wingSpan * 0.55, 0.0, 0.05);
 	glRotated(-flapDeg, 0.0, 0.0, 1.0);
 	glTranslated(-wingChord * 0.25, 0.0, -wingChord * 0.25);
 	glScaled(wingSpan, wingThickness, wingChord);
-	glColor3d(wingColor.x, wingColor.y, wingColor.z);
-	glutSolidCube(1.0);
-	glColor3d(wireColor.x, wireColor.y, wireColor.z);
 	glutWireCube(1.0);
 	glPopMatrix();
-
+	
+	glPopAttrib();
 	glPopMatrix();
+}
+
+// Draw the boid
+void Boid::draw()
+{
+	// Determine yaw based on velocity
+	Vec3 v = getVelocity();
+	GLdouble speed = length(v);
+	if (speed > 1e-6) yaw = std::atan2(v.x, v.z) * (180.0 / PI);
+
+	// Draw shadow
+	drawShadow();
+
+	// Draw body
+	glEnable(GL_LIGHTING);
+	drawBody();
 }
 
 // Set body colors

@@ -14,7 +14,13 @@ public:
 
 	// Boid behavior methods
 	void update(const std::vector<Boid*>& boids, GLdouble deltaTime);
+	
+	// Draw the boid
 	void draw() override;
+	void drawShadow();
+	void drawBody();
+
+	// Set leader boid
 	void setLeader(ControlledBoid* leader) { leaderBoid = leader; }
 	
 	// Getters for movement attributes
@@ -58,6 +64,12 @@ private:
 	GLdouble wingAmplitude; // Wing flapping amplitude
 	GLdouble wingBaseRate;	// Wing flapping base rate
 
+	// Body dimensions
+	GLdouble bodyLength, bodyRadius;
+	GLdouble noseLength, noseRadius;
+	GLdouble tailLength, tailRadius;
+	GLdouble wingSpan, wingChord, wingThickness;
+
 	// Leader
 	ControlledBoid* leaderBoid = nullptr; // Pointer to the controlled boid leader
 
@@ -66,4 +78,7 @@ private:
 	void flock(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz);
 	void separate(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz);
 	void align(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz);
+	
+	// Helper method to draw the boid geometry
+	void drawGeometry(bool useColor) const;
 };

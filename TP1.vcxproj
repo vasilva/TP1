@@ -151,6 +151,7 @@
     <ClInclude Include="Object.h" />
     <ClInclude Include="Obstacle.h" />
     <ClInclude Include="ObstacleManager.h" />
+    <ClInclude Include="Shadow.h" />
     <ClInclude Include="Tower.h" />
     <ClInclude Include="vecFunctions.h" />
     <ClInclude Include="World.h" />

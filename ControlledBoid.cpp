@@ -5,10 +5,11 @@
 #include "vecFunctions.h"
 
 ControlledBoid::ControlledBoid()
-	: yaw(0.0), height(10.0), speed(0.0),
-	maxSpeed(30.0), acceleration(4.0)
+	: yaw(0.0), speed(0.0),
+	maxSpeed(30.0), acceleration(4.0),
+	height(10.0), targetHeight(10.0),
+	heightSmoothFactor(10.0)
 {
-	setPosition(UnitY * height);
 	setVelocity(Zero);
 	setSize(1.0, 1.0, 1.0);
 	setColors(Color::LightBlue, Color::LightGreen, Color::Cyan);
@@ -40,8 +41,21 @@ void ControlledBoid::stop()
 	setVelocity(0.0, 0.0, 0.0);
 }
 
+void ControlledBoid::setHeight(GLdouble h)
+{
+	targetHeight = h;
+}
+
 void ControlledBoid::update(GLdouble deltaTime)
 {
+	// Update height towards target height
+	if (deltaTime > 0.0)
+	{
+		// Smooth height adjustment
+		GLdouble alpha = 1.0 - std::exp(-heightSmoothFactor * deltaTime);
+		height += (targetHeight - height) * alpha;
+	}
+
 	// Update velocity based on facing direction and speed
 	GLdouble yawRad = yaw * (PI / 180.0);
 	Vec3 forwardDir = { std::sin(yawRad), 0.0, std::cos(yawRad) };
@@ -60,6 +74,6 @@ void ControlledBoid::update(GLdouble deltaTime)
 	// Update position based on velocity
 	auto pos = getPosition();
 	auto newPos = pos + newVelocity * deltaTime;
-	newPos.y = height; // Maintain fixed height
+	newPos.y = height;
 	setPosition(newPos);
 }

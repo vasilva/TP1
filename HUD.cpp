@@ -1,9 +1,9 @@
 #include <GL/glut.h>
 #include <sstream>
+#include <algorithm>
 
 #include "HUD.h"
 #include "vecFunctions.h"
-#include <algorithm>
 
 // Prepare HUD lines with control instructions
 std::vector<std::string> prepareHUDLines()
@@ -22,6 +22,7 @@ std::vector<std::string> prepareHUDLines()
 	hudLines.push_back("Mouse Wheel: Zoom In/Out");
 	hudLines.push_back("1/2/3: Switch Camera (Follow/Fixed/Side)");
 	hudLines.push_back("F: Toggle Fullscreen");
+	hudLines.push_back("N: Toggle Fog");
 	hudLines.push_back("Space: Pause/Unpause Simulation");
 	hudLines.push_back("Esc: Exit");
 
@@ -136,15 +137,13 @@ void drawPausedText()
 	auto color = Color::Black;
 	glColor3d(color.x, color.y, color.z);
 	glRasterPos2i(x + 2, y - 2);
-	for (char c : pauseText)
-		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+	drawText(pauseText);
 
 	// Draw main text
 	color = Color::Yellow;
 	glColor3d(color.x, color.y, color.z);
 	glRasterPos2i(x, y);
-	for (char c : pauseText)
-		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+	drawText(pauseText);
 
 	// Restore previous OpenGL state
 	glPopMatrix();

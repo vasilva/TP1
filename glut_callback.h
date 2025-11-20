@@ -49,7 +49,32 @@ static bool sFullscreen = true;
 static bool sPaused = false;
 static std::vector<std::string> sHUDLines = prepareHUDLines();
 
+// Fog control
+static bool sFogEnabled = true;
+static const GLfloat sFogColor[4] = { 0.0f, 1.0f, 1.0f, 1.0f }; // Cyan
+static GLfloat sFogDensity = 0.005f;
+
 /* GLUT callback Handlers */
+
+void enableFog()
+{
+	// Enable fog and set parameters
+	glEnable(GL_FOG);
+	glFogfv(GL_FOG_COLOR, sFogColor);
+	glFogi(GL_FOG_MODE, GL_EXP);
+
+	// Start/End based on camera distance
+	GLfloat fogStart = static_cast<GLfloat>(std::max(10.0, sCameraDistance * 0.5));
+	GLfloat fogEnd = static_cast<GLfloat>(std::max(60.0, sCameraDistance * 3.0));
+	glFogf(GL_FOG_START, fogStart);
+	glFogf(GL_FOG_END, fogEnd);
+
+	// Density and quality
+	glFogf(GL_FOG_DENSITY, sFogDensity);
+	glHint(GL_FOG_HINT, GL_NICEST);
+}
+
+void disableFog() { glDisable(GL_FOG); }
 
 // Display callback: render the scene
 static void display(void)
@@ -66,6 +91,9 @@ static void display(void)
 
 	// Clear the color and depth buffers
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Enable or disable fog
+	sFogEnabled ? enableFog() : disableFog();
 
 	// Update boids if not paused
 	if (!sPaused && sControlledBoid) sControlledBoid->update(dt);
@@ -177,6 +205,9 @@ static void display(void)
 		for (auto& w : *sWalls)
 			w.draw();
 
+	// Disable fog before drawing HUD
+	disableFog();
+
 	// Draw HUD overlay
 	int boidCount = sFlock ? sFlock->getBoidCount() : 0;
 	int obstacleCount = sObstacleManager ? sObstacleManager->size() : 0;
@@ -185,6 +216,9 @@ static void display(void)
 	// Render paused text if simulation is paused
 	if (sPaused) drawPausedText();
 
+	// Re-enable fog if it was enabled
+	if (sFogEnabled) enableFog();
+
 	// Swap buffers for animation
 	glutSwapBuffers();
 }
@@ -192,6 +226,7 @@ static void display(void)
 // Reshape callback: adjust viewport and projection matrix
 static void reshape(int w, int h)
 {
+	// Aspect ratio
 	const auto aspect = (double)w / (double)h;
 
 	// Set the viewport to the entire window
@@ -212,42 +247,39 @@ static void reshape(int w, int h)
 // Keyboard callback: handle WASDQE keys for controlled boid
 static void keyboardControl(unsigned char key, int x, int y)
 {
-	const double rotateAmount = 5.0;    // degrees per key press
-	const double heightStep = 0.5;      // height change per key press
-	if (!sControlledBoid) return;
+	const GLdouble rotateAmount = 5.0;	// degrees per key press
+	const GLdouble heightStep = 0.5;	// height change per key press
+	const GLdouble minHeight = 2.0;		// minimum height
+	const GLdouble maxHeight = 50.0;	// maximum height
+	if (!sControlledBoid) return;		// No controlled boid available
 
 	switch (key)
 	{
 		// Movement controls
 	case 'w': case 'W': // Accelerate forward
-		sControlledBoid->moveForward(1.0);
-		break;
+		sControlledBoid->moveForward(1.0); break;
 	case 's': case 'S': // Decelerate / move backward
-		sControlledBoid->moveBackward(1.0);
-		break;
+		sControlledBoid->moveBackward(1.0); break;
 	case 'a': case 'A': // Turn left
-		sControlledBoid->rotateYaw(rotateAmount);
-		break;
+		sControlledBoid->rotateYaw(rotateAmount); break;
 	case 'd': case 'D': // Turn right
-		sControlledBoid->rotateYaw(-rotateAmount);
-		break;
-	case 'q': case 'Q': // Increase height
-		sControlledBoid->setHeight(sControlledBoid->getHeight() + heightStep);
-		{
-			auto p = sControlledBoid->getPosition();
-			p.y = sControlledBoid->getHeight();
-			sControlledBoid->setPosition(p);
-		}
-		break;
-	case 'e': case 'E': // Decrease height
-		sControlledBoid->setHeight(sControlledBoid->getHeight() - heightStep);
-		{
-			auto p = sControlledBoid->getPosition();
-			p.y = sControlledBoid->getHeight();
-			sControlledBoid->setPosition(p);
-		}
-		break;
+		sControlledBoid->rotateYaw(-rotateAmount); break;
 
+	case 'q': case 'Q': // Increase height
+	{
+		GLdouble incHeight = sControlledBoid->getHeight() + heightStep;
+		if (incHeight > maxHeight) incHeight = maxHeight;
+		sControlledBoid->setHeight(incHeight);
+	}
+	break;
+
+	case 'e': case 'E': // Decrease height
+	{
+		GLdouble decHeight = sControlledBoid->getHeight() - heightStep;
+		if (decHeight < minHeight) decHeight = minHeight;
+		sControlledBoid->setHeight(decHeight);
+	}
+	break;
 
 	case ' ': // Pause/unpause simulation
 		sPaused = !sPaused;
@@ -258,26 +290,29 @@ static void keyboardControl(unsigned char key, int x, int y)
 		break;
 
 	case 'f': case 'F': // Toggle fullscreen
-		if (sFullscreen)
+		sFullscreen = !sFullscreen;
+		if (sFullscreen) glutFullScreen();
+		else
 		{
 			glutPositionWindow(0, 0);
 			glutReshapeWindow(1920, 1080);
-			sFullscreen = false;
 		}
-		else
-		{
-			glutFullScreen();
-			sFullscreen = true;
-		}
+		break;
+
+	case 'n': case 'N': // Toggle fog
+		sFogEnabled = !sFogEnabled;
+		sFogEnabled ? enableFog() : disableFog();
 		break;
 
 		// Obstacle management
 	case 'o': case 'O': // Add obstacle
 		if (sObstacleManager) sObstacleManager->addObstacle();
 		break;
+
 	case 'p': case 'P': // Remove obstacle
 		if (sObstacleManager) sObstacleManager->removeObstacle();
 		break;
+
 	case 'r': case 'R': // Reset obstacles
 		if (sObstacleManager && sFloor) sObstacleManager->reset();
 		break;
@@ -291,12 +326,13 @@ static void keyboardControl(unsigned char key, int x, int y)
 	case '+': case '=':
 		if (sFlock) sFlock->addBoid();
 		break;
+
 	case '-': case '_':
 		if (sFlock) sFlock->removeBoid();
 		break;
 
 		// Exit
-	case 27: exit(EXIT_SUCCESS); break;
+	case 27: exit(0); break;
 
 	default: break;
 	}
@@ -312,17 +348,13 @@ static void cameraSpecial(int key, int x, int y)
 	switch (key)
 	{
 	case GLUT_KEY_LEFT:		// Turn left
-		sControlledBoid->rotateYaw(rotateAmount);
-		break;
+		sControlledBoid->rotateYaw(rotateAmount); break;
 	case GLUT_KEY_RIGHT:	// Turn right
-		sControlledBoid->rotateYaw(-rotateAmount);
-		break;
+		sControlledBoid->rotateYaw(-rotateAmount); break;
 	case GLUT_KEY_UP:		// Accelerate forward
-		sControlledBoid->moveForward(1.0);
-		break;
+		sControlledBoid->moveForward(1.0); break;
 	case GLUT_KEY_DOWN:		// Decelerate / move backward
-		sControlledBoid->moveBackward(1.0);
-		break;
+		sControlledBoid->moveBackward(1.0); break;
 
 	default: break;
 	}

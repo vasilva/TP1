@@ -16,7 +16,7 @@
 const GLfloat light_ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };		// Ambient light
 const GLfloat light_diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };		// Diffuse light
 const GLfloat light_specular[] = { 0.3f, 0.3f, 0.3f, 1.0f };	// Specular light
-const GLfloat light_position[] = { 0.0f, 100.0f, 20.0f, 0.0f };	// Light position
+const GLfloat light_position[] = { 0.0f, 100.0f, 10.0f, 0.0f };	// Light position
 
 // Material parameters
 const GLfloat mat_ambient[] = { 0.6f, 0.6f, 0.6f, 1.0f };  // Material ambient reflectance

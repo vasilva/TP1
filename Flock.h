@@ -11,10 +11,10 @@ public:
 	~Flock();
 
 	// Initialize the flock with a number of boids around a leader
-	void init(int n, ControlledBoid* leader, GLdouble spread);
+	void init(int n, ControlledBoid* leader, GLfloat spread);
 	
 	// Update and draw the flock
-	void update(GLdouble dt);
+	void update(GLfloat dt);
 	void draw();
 	
 	// Manage boids in the flock

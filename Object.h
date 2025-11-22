@@ -21,22 +21,22 @@ public:
 	const bool canCollide() const { return hasCollider; }
 
 	// Setters
-	void setPosition(GLdouble x, GLdouble y, GLdouble z);
+	void setPosition(GLfloat x, GLfloat y, GLfloat z);
 	void setPosition(Vec3 pos);
 
-	void setRotation(GLdouble x, GLdouble y, GLdouble z);
+	void setRotation(GLfloat x, GLfloat y, GLfloat z);
 	void setRotation(Vec3 rot);
 
-	void setVelocity(GLdouble x, GLdouble y, GLdouble z);
+	void setVelocity(GLfloat x, GLfloat y, GLfloat z);
 	void setVelocity(Vec3 v);
 
-	void setSize(GLdouble x, GLdouble y, GLdouble z);
+	void setSize(GLfloat x, GLfloat y, GLfloat z);
 	void setSize(Vec3 s);
 
 	// Physics methods
-	void applyForce(GLdouble fx, GLdouble fy, GLdouble fz);
+	void applyForce(GLfloat fx, GLfloat fy, GLfloat fz);
 	void applyForce(Vec3 force);
-	void updatePosition(GLdouble deltaTime);
+	void updatePosition(GLfloat deltaTime);
 	
 	// Collision methods
 	void enableCollision() { hasCollider = true; }

@@ -20,18 +20,18 @@ void Obstacle::draw()
 
 	// Transformations
 	glPushMatrix();
-	glTranslated(pos.x, pos.y, pos.z);
-	glRotated(rotation.x, 1.0, 0.0, 0.0);
-	glRotated(rotation.y, 0.0, 1.0, 0.0);
-	glRotated(rotation.z, 0.0, 0.0, 1.0);
-	glScaled(size.x, size.y, size.z);
+	glTranslatef(pos.x, pos.y, pos.z);
+	glRotatef(rotation.x, 1.0f, 0.0f, 0.0f);
+	glRotatef(rotation.y, 0.0f, 1.0f, 0.0f);
+	glRotatef(rotation.z, 0.0f, 0.0f, 1.0f);
+	glScalef(size.x, size.y, size.z);
 
 	// Draw solid cone
-	glColor3d(fillColor.x, fillColor.y, fillColor.z);
+	glColor3f(fillColor.x, fillColor.y, fillColor.z);
 	glutSolidCube(1.0);
 
 	// Draw wireframe
-	glColor3d(wireColor.x, wireColor.y, wireColor.z);
+	glColor3f(wireColor.x, wireColor.y, wireColor.z);
 	glutWireCube(1.0);
 	glPopMatrix();
 }

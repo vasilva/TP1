@@ -55,7 +55,7 @@ void drawHUD(int boidCount, int obstacleCount, std::vector<std::string>& hudLine
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	glOrtho(0, w, 0, h, -1, 1);
+	glOrtho(0.0, w, 0.0, h, -1.0, 1.0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
@@ -85,12 +85,12 @@ void drawHUD(int boidCount, int obstacleCount, std::vector<std::string>& hudLine
 		int x = margin, y = margin + i * lineHeight;
 
 		// Draw shadow text
-		glColor3d(shadowColor.x, shadowColor.y, shadowColor.z);
+		glColor3f(shadowColor.x, shadowColor.y, shadowColor.z);
 		glRasterPos2i(x + 1, y - 1);
 		drawText(hudLines[i]);
 
 		// Draw main text
-		glColor3d(textColor.x, textColor.y, textColor.z);
+		glColor3f(textColor.x, textColor.y, textColor.z);
 		glRasterPos2i(x, y);
 		drawText(hudLines[i]);
 	}
@@ -122,7 +122,7 @@ void drawPausedText()
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	glOrtho(0, w, 0, h, -1, 1);
+	glOrtho(0.0, w, 0.0, h, -1.0, 1.0);
 
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
@@ -135,13 +135,13 @@ void drawPausedText()
 	
 	// Draw shadow
 	auto color = Color::Black;
-	glColor3d(color.x, color.y, color.z);
+	glColor3f(color.x, color.y, color.z);
 	glRasterPos2i(x + 2, y - 2);
 	drawText(pauseText);
 
 	// Draw main text
 	color = Color::Yellow;
-	glColor3d(color.x, color.y, color.z);
+	glColor3f(color.x, color.y, color.z);
 	glRasterPos2i(x, y);
 	drawText(pauseText);
 

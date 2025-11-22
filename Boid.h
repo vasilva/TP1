@@ -13,7 +13,7 @@ public:
 	Boid(const Vec3 pos, ControlledBoid* leader);
 
 	// Boid behavior methods
-	void update(const std::vector<Boid*>& boids, GLdouble deltaTime);
+	void update(const std::vector<Boid*>& boids, GLfloat deltaTime);
 	
 	// Draw the boid
 	void draw() override;
@@ -24,15 +24,18 @@ public:
 	void setLeader(ControlledBoid* leader) { leaderBoid = leader; }
 	
 	// Getters for movement attributes
-	GLdouble getYaw() const { return yaw; }
-	GLdouble getWingAngle() const { return wingAngle; }
-	GLdouble getWingAmplitude() const { return wingAmplitude; }
-	GLdouble getWingBaseRate() const { return wingBaseRate; }
+	GLfloat getYaw() const { return yaw; }
+	GLfloat getMaxSpeed() const { return maxSpeed; }
+	GLfloat getWingAngle() const { return wingAngle; }
+	GLfloat getWingAmplitude() const { return wingAmplitude; }
+	GLfloat getWingBaseRate() const { return wingBaseRate; }
 
 	// Setters for movement attributes
-	void setWingAngle(GLdouble angle) { wingAngle = angle; }
-	void setWingAmplitude(GLdouble amplitude) { wingAmplitude = amplitude; }
-	void setWingBaseRate(GLdouble rate) { wingBaseRate = rate; }
+	void setYaw(GLfloat y) { yaw = y; }
+	void setMaxSpeed(GLfloat speed) { maxSpeed = speed; }
+	void setWingAngle(GLfloat angle) { wingAngle = angle; }
+	void setWingAmplitude(GLfloat amplitude) { wingAmplitude = amplitude; }
+	void setWingBaseRate(GLfloat rate) { wingBaseRate = rate; }
 
 	// Set body colors
 	void setColors(const Vec3 front, const Vec3 body, const Vec3 wing);
@@ -45,39 +48,39 @@ public:
 
 private:
 	// Movement attributes
-	GLdouble maxSpeed;			// Maximum speed
-	GLdouble maxForce;			// Maximum steering force
-	GLdouble neighRadius;		// Neighborhood radius
-	GLdouble separationRadius;	// Separation radius
-	GLdouble yaw;				// Facing direction in degrees
+	GLfloat yaw;				// Facing direction in degrees
+	GLfloat maxSpeed;			// Maximum speed
+	GLfloat maxForce;			// Maximum steering force
+	GLfloat neighRadius;		// Neighborhood radius
+	GLfloat separationRadius;	// Separation radius
 
 	// Weights for behaviors
-	GLdouble weightCohesion;	// Weight for cohesion behavior
-	GLdouble weightSeparation;	// Weight for separation behavior
-	GLdouble weightAlignment;	// Weight for alignment behavior
+	GLfloat weightCohesion;	// Weight for cohesion behavior
+	GLfloat weightSeparation;	// Weight for separation behavior
+	GLfloat weightAlignment;	// Weight for alignment behavior
 
 	// Body colors
 	Vec3 frontColor, bodyColor, wingColor, wireColor = Color::Black;
 
 	// Wing animation state
-	GLdouble wingAngle;		// Current wing angle
-	GLdouble wingAmplitude; // Wing flapping amplitude
-	GLdouble wingBaseRate;	// Wing flapping base rate
+	GLfloat wingAngle;		// Current wing angle
+	GLfloat wingAmplitude; // Wing flapping amplitude
+	GLfloat wingBaseRate;	// Wing flapping base rate
 
 	// Body dimensions
-	GLdouble bodyLength, bodyRadius;
-	GLdouble noseLength, noseRadius;
-	GLdouble tailLength, tailRadius;
-	GLdouble wingSpan, wingChord, wingThickness;
+	GLfloat bodyLength, bodyRadius;
+	GLfloat noseLength, noseRadius;
+	GLfloat tailLength, tailRadius;
+	GLfloat wingSpan, wingChord, wingThickness;
 
 	// Leader
 	ControlledBoid* leaderBoid = nullptr; // Pointer to the controlled boid leader
 
 	// Behavior methods
-	void applyBehaviors(const std::vector<Boid*>& neighbors, GLdouble dt);
-	void flock(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz);
-	void separate(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz);
-	void align(const std::vector<Boid*>& neighbors, GLdouble& rx, GLdouble& ry, GLdouble& rz);
+	void applyBehaviors(const std::vector<Boid*>& neighbors, GLfloat dt);
+	void flock(const std::vector<Boid*>& neighbors, GLfloat& rx, GLfloat& ry, GLfloat& rz);
+	void separate(const std::vector<Boid*>& neighbors, GLfloat& rx, GLfloat& ry, GLfloat& rz);
+	void align(const std::vector<Boid*>& neighbors, GLfloat& rx, GLfloat& ry, GLfloat& rz);
 	
 	// Helper method to draw the boid geometry
 	void drawGeometry(bool useColor) const;

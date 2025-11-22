@@ -3,11 +3,11 @@
 #include "Camera.h"
 
 Camera::Camera()
-	: yawAngle(0.0), pitchAngle(0.0),
+	: yawAngle(0.0f), pitchAngle(0.0f),
 	position(Zero), target(Zero), up(UnitY),
-	minDistance(5.0), maxDistance(100.0)
+	minDistance(5.0f), maxDistance(100.0f)
 {
-	distanceToTarget = minDistance * 2.0;
+	distanceToTarget = minDistance * 2.0f;
 	updateTargetFromAngles();
 }
 
@@ -25,11 +25,11 @@ void Camera::applyView() const
 	);
 }
 
-void Camera::moveForward(GLdouble distance)
+void Camera::moveForward(GLfloat distance)
 {
 	// Calculate the forward vector
-	GLdouble yawRad = yawAngle * (PI / 180.0);
-	GLdouble pitchRad = pitchAngle * (PI / 180.0);
+	GLfloat yawRad = yawAngle * (PI / 180.0f);
+	GLfloat pitchRad = pitchAngle * (PI / 180.0f);
 	Vec3 forward = {
 		std::cos(pitchRad) * std::sin(yawRad),
 		std::sin(pitchRad),
@@ -43,35 +43,35 @@ void Camera::moveForward(GLdouble distance)
 	updateTargetFromAngles();
 }
 
-void Camera::moveBackward(GLdouble distance)
+void Camera::moveBackward(GLfloat distance)
 {
 	moveForward(-distance);
 }
 
-void Camera::moveUp(GLdouble distance)
+void Camera::moveUp(GLfloat distance)
 {
 	position += up * distance;
 	updateTargetFromAngles();
 }
 
-void Camera::moveDown(GLdouble distance)
+void Camera::moveDown(GLfloat distance)
 {
 	moveUp(-distance);
 }
 
-void Camera::rotate(GLdouble yawDeg, GLdouble pitchDeg)
+void Camera::rotate(GLfloat yawDeg, GLfloat pitchDeg)
 {
 	// Update yaw and pitch angles
 	yawAngle += yawDeg;
 	pitchAngle += pitchDeg;
 
 	// Clamp pitch angle to avoid gimbal lock
-	if (pitchAngle > 89.0)  pitchAngle = 89.0;
-	if (pitchAngle < -89.0) pitchAngle = -89.0;
+	if (pitchAngle > 89.0f)  pitchAngle = 89.0f;
+	if (pitchAngle < -89.0f) pitchAngle = -89.0f;
 	updateTargetFromAngles();
 }
 
-void Camera::zoomIn(GLdouble amount)
+void Camera::zoomIn(GLfloat amount)
 {
 	// Decrease distance to target
 	distanceToTarget -= amount;
@@ -84,7 +84,7 @@ void Camera::zoomIn(GLdouble amount)
 		moveForward(amount);
 }
 
-void Camera::zoomOut(GLdouble amount)
+void Camera::zoomOut(GLfloat amount)
 {
 	// Increase distance to target
 	distanceToTarget += amount;
@@ -97,7 +97,7 @@ void Camera::zoomOut(GLdouble amount)
 		moveBackward(amount);
 }
 
-void Camera::setPosition(GLdouble x, GLdouble y, GLdouble z)
+void Camera::setPosition(GLfloat x, GLfloat y, GLfloat z)
 {
 	position = Vec3(x, y, z);
 	updateTargetFromAngles();
@@ -109,18 +109,18 @@ void Camera::setPosition(Vec3 v)
 	updateTargetFromAngles();
 }
 
-void Camera::setTarget(GLdouble x, GLdouble y, GLdouble z)
+void Camera::setTarget(GLfloat x, GLfloat y, GLfloat z)
 {
 	target = Vec3(x, y, z);
 
 	// Update yaw and pitch angles based on new target
 	Vec3 dir = target - position;
-	GLdouble d = length(dir);
-	if (d > 0.0) {
+	GLfloat d = length(dir);
+	if (d > 0.0f) {
 		distanceToTarget = d;
 		normalize(dir);
-		pitchAngle = std::asin(dir.y) * (180.0 / PI);
-		yawAngle = std::atan2(dir.x, dir.z) * (180.0 / PI);
+		pitchAngle = std::asin(dir.y) * (180.0f / PI);
+		yawAngle = std::atan2(dir.x, dir.z) * (180.0f / PI);
 	}
 	updateTargetFromAngles();
 }
@@ -131,17 +131,17 @@ void Camera::setTarget(Vec3 t)
 
 	// Update yaw and pitch angles based on new target
 	Vec3 dir = target - position;
-	GLdouble d = length(dir);
-	if (d > 0.0) {
+	GLfloat d = length(dir);
+	if (d > 0.0f) {
 		distanceToTarget = d;
 		normalize(dir);
-		pitchAngle = std::asin(dir.y) * (180.0 / PI);
-		yawAngle = std::atan2(dir.x, dir.z) * (180.0 / PI);
+		pitchAngle = std::asin(dir.y) * (180.0f / PI);
+		yawAngle = std::atan2(dir.x, dir.z) * (180.0f / PI);
 	}
 	updateTargetFromAngles();
 }
 
-void Camera::setUp(GLdouble x, GLdouble y, GLdouble z)
+void Camera::setUp(GLfloat x, GLfloat y, GLfloat z)
 {
 	up = Vec3(x, y, z);
 	updateTargetFromAngles();
@@ -156,8 +156,8 @@ void Camera::setUp(Vec3 u)
 void Camera::updateTargetFromAngles()
 {
 	// Convert angles from degrees to radians
-	GLdouble yawRad = yawAngle * PI / 180.0;
-	GLdouble pitchRad = pitchAngle * PI / 180.0;
+	GLfloat yawRad = yawAngle * PI / 180.0f;
+	GLfloat pitchRad = pitchAngle * PI / 180.0f;
 
 	// Calculate the new target position
 	Vec3 forward = {

@@ -7,27 +7,22 @@ public:
 	ControlledBoid();
 
 	// Control methods
-	void rotateYaw(GLdouble angle);		// Rotate around Y-axis
-	void moveForward(GLdouble amount);	// Move forward in facing direction
-	void moveBackward(GLdouble amount); // Move backward in facing direction
+	void rotateYaw(GLfloat angle);		// Rotate around Y-axis
+	void moveForward(GLfloat amount);	// Move forward in facing direction
+	void moveBackward(GLfloat amount); // Move backward in facing direction
 	void stop();						// Stop movement
 
 	// Height control
-	void setHeight(GLdouble h);
-	GLdouble getHeight() const { return height; }
+	void setHeight(GLfloat h) { height = h; }
+	GLfloat getHeight() const { return height; }
 
 	// Override update to include control
-	void update(GLdouble deltaTime);
-
-	// Get facing direction
-	GLdouble getYaw() const { return yaw; }
+	void update(GLfloat deltaTime);
 
 private:
-	GLdouble yaw;				 // Facing direction in degrees, 0 = +Z direction
-	GLdouble speed;				 // Movement speed
-	GLdouble maxSpeed;			 // Maximum speed
-	GLdouble acceleration;		 // Acceleration value
-	GLdouble height;			 // Current height	
-	GLdouble targetHeight;		 // Target height
-	GLdouble heightSmoothFactor; // Smoothing factor for height changes
+	GLfloat speed;				 // Movement speed
+	GLfloat acceleration;		 // Acceleration value
+	GLfloat height;				// Current height	
+	GLfloat targetHeight;		 // Target height
+	GLfloat heightSmoothFactor; // Smoothing factor for height changes
 };

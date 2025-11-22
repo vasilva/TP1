@@ -13,19 +13,19 @@
 #include "World.h"
 
 // Lighting parameters
-const GLfloat light_ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };		// Ambient light
-const GLfloat light_diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };		// Diffuse light
-const GLfloat light_specular[] = { 0.3f, 0.3f, 0.3f, 1.0f };	// Specular light
-const GLfloat light_position[] = { 0.0f, 100.0f, 10.0f, 0.0f };	// Light position
+const GLfloat light_ambient[4] = { 0.1f, 0.1f, 0.1f, 1.0f };	 // Ambient light
+const GLfloat light_diffuse[4] = { 1.0f, 1.0f, 1.0f, 1.0f };	 // Diffuse light
+const GLfloat light_specular[4] = { 0.3f, 0.3f, 0.3f, 1.0f };	 // Specular light
+const GLfloat light_position[4] = { 0.0f, 100.0f, 10.0f, 0.0f }; // Light position
 
 // Material parameters
-const GLfloat mat_ambient[] = { 0.6f, 0.6f, 0.6f, 1.0f };  // Material ambient reflectance
-const GLfloat mat_diffuse[] = { 0.7f, 0.7f, 0.7f, 1.0f };  // Material diffuse reflectance
-const GLfloat mat_specular[] = { 0.2f, 0.2f, 0.2f, 1.0f }; // Material specular reflectance
-const GLfloat high_shininess[] = { 30.0f };
+const GLfloat mat_ambient[4] = { 0.6f, 0.6f, 0.6f, 1.0f };  // Material ambient reflectance
+const GLfloat mat_diffuse[4] = { 0.7f, 0.7f, 0.7f, 1.0f };  // Material diffuse reflectance
+const GLfloat mat_specular[4] = { 0.2f, 0.2f, 0.2f, 1.0f }; // Material specular reflectance
+const GLfloat high_shininess[1] = { 30.0f };
 
-int main(int argc, char* argv[]) {
-
+int main(int argc, char* argv[])
+{
 	// Initialize GLUT
 	glutInit(&argc, argv);
 	glutInitWindowPosition(0, 0);
@@ -34,40 +34,38 @@ int main(int argc, char* argv[]) {
 	glutCreateWindow("TP1 - boids");
 	glutFullScreen();
 
+	// Set background color to cyan
 	Vec3 backgroundColor = Color::Cyan;
-	glClearColor(static_cast<GLfloat>(backgroundColor.x),
-		static_cast<GLfloat>(backgroundColor.y),
-		static_cast<GLfloat>(backgroundColor.z),
-		1.0f);
+	glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, 1.0f);
 
 	// Create controlled boid
 	ControlledBoid controlledBoid;
-	controlledBoid.setPosition(20.0, 10.0, 20.0);
-	controlledBoid.setSize(0.5, 0.1, 0.5);
+	controlledBoid.setPosition(20.0f, 10.0f, 20.0f);
+	controlledBoid.setSize(0.5f, 0.1f, 0.5f);
 
 	// Create floor
 	Floor floor;
 	floor.setPosition(Zero);
 	floor.setRotation(Zero);
-	floor.setSize(1000.0, 1.0, 1000.0);
+	floor.setSize(1000.0f, 1.0f, 1000.0f);
 	auto floorSize = floor.getSize();
 
 	// Create tower at the center of the floor
 	Tower tower;
 	tower.setPosition(Zero);
-	tower.setRotation(UnitX * -90.0);
-	tower.setSize(10.0, 100.0, 10.0);
+	tower.setRotation(UnitX * -90.0f);
+	tower.setSize(10.0f, 100.0f, 10.0f);
 	gWorldTower = &tower;
 
 	// Create several obstacles scattered over the floor
 	std::vector<Obstacle> walls;
 	ObstacleManager obstacleManager;
-	obstacleManager.setFloor(floor);
-	obstacleManager.generateRandom(floor, 100);
+	obstacleManager.setFloor(&floor);
+	obstacleManager.generateRandom(100);
 
 	// Create and initialize flock
 	Flock flock;
-	flock.init(50, &controlledBoid, floorSize.x * 0.2);
+	flock.init(50, &controlledBoid, floorSize.x * 0.2f);
 
 	// Initialize cameras
 	Camera followCamera, fixedCamera, sideCamera;

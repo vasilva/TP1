@@ -1,9 +1,6 @@
 #include "Tower.h"
 
-Tower::Tower()
-	: fillColor(Color::Red), wireColor(Color::Black)
-{
-}
+Tower::Tower() : fillColor(Color::Red), wireColor(Color::Black) {}
 
 Tower::Tower(const Vec3 pos, const Vec3 size, const Vec3 color)
 	: fillColor(color), wireColor(Color::Black)
@@ -21,17 +18,17 @@ void Tower::draw()
 
 	// Transformations
 	glPushMatrix();
-	glTranslated(pos.x, pos.y, pos.z);
-	glRotated(rotation.x, 1.0, 0.0, 0.0);
-	glRotated(rotation.y, 0.0, 1.0, 0.0);
-	glRotated(rotation.z, 0.0, 0.0, 1.0);
+	glTranslatef(pos.x, pos.y, pos.z);
+	glRotatef(rotation.x, 1.0f, 0.0f, 0.0f);
+	glRotatef(rotation.y, 0.0f, 1.0f, 0.0f);
+	glRotatef(rotation.z, 0.0f, 0.0f, 1.0f);
 
 	// Draw solid cone
-	glColor3d(fillColor.x, fillColor.y, fillColor.z);
+	glColor3f(fillColor.x, fillColor.y, fillColor.z);
 	glutSolidCone(size.x, size.y, 30, 1);
 
 	// Draw wireframe
-	glColor3d(wireColor.x, wireColor.y, wireColor.z);
+	glColor3f(wireColor.x, wireColor.y, wireColor.z);
 	glutWireCone(size.x, size.y, 30, 1);
 	glPopMatrix();
 }

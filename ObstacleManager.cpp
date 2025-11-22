@@ -4,13 +4,6 @@
 #include "ObstacleManager.h"
 #include "vecFunctions.h"
 
-// Set the floor for obstacle placement
-void ObstacleManager::setFloor(const Floor& floor)
-{
-	worldFloor = floor;
-	hasFloor = true;
-}
-
 // Add a single obstacle at a random position on the floor
 void ObstacleManager::addObstacle()
 {
@@ -18,28 +11,28 @@ void ObstacleManager::addObstacle()
 		return; // Max reached
 
 	// RNG
-	auto floorSize = hasFloor ? worldFloor.getSize() : Vec3{ 1000.0, 0.0, 1000.0 };
+	auto floorSize = hasFloor ? worldFloor->getSize() : Vec3{ 1000.0f, 0.0f, 1000.0f };
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	std::uniform_real_distribution<GLdouble> distPos(-floorSize.x * 0.5, floorSize.x * 0.5);
-	std::uniform_real_distribution<GLdouble> distSize(5.0, 30.0);
+	std::uniform_real_distribution<GLfloat> distPos(-floorSize.x * 0.5f, floorSize.x * 0.5f);
+	std::uniform_real_distribution<GLfloat> distSize(5.0f, 30.0f);
 
 	// Generate random size and position
-	GLdouble s = distSize(gen);
-	Vec3 size = { s, s * 2.0, s };
+	GLfloat s = distSize(gen);
+	Vec3 size = { s, s * 2.0f, s };
 
-	GLdouble px = distPos(gen);
-	GLdouble pz = distPos(gen);
+	GLfloat px = distPos(gen);
+	GLfloat pz = distPos(gen);
 
 	// ensure not too close to center
 	auto distCenter2 = px * px + pz * pz;
-	if (distCenter2 < 400.0) // min distance 20 units
+	if (distCenter2 < 400.0f) // min distance 20 units
 	{
-		px += (px < 0.0) ? -20.0 : 20.0;
-		pz += (pz < 0.0) ? -20.0 : 20.0;
+		px += (px < 0.0f) ? -20.0f : 20.0f;
+		pz += (pz < 0.0f) ? -20.0f : 20.0f;
 	}
 	// Create obstacle
-	Vec3 pos = { px, size.y * 0.5, pz };
+	Vec3 pos = { px, size.y * 0.5f, pz };
 	obstacles.emplace_back(pos, size);
 	obstacles.back().enableCollision();
 }
@@ -59,13 +52,11 @@ void ObstacleManager::reset()
 
 	// Regenerate
 	if (hasFloor)
-		generateRandom(worldFloor);
-	else
-		generateRandom(Floor());
+		generateRandom(100);
 }
 
 // Generate obstacles randomly placed on the floor
-void ObstacleManager::generateRandom(const Floor& floor, int count, unsigned int seed)
+void ObstacleManager::generateRandom(int count, unsigned int seed)
 {
 	obstacles.clear();
 	
@@ -76,28 +67,28 @@ void ObstacleManager::generateRandom(const Floor& floor, int count, unsigned int
 	// RNG
 	std::random_device rd;
 	std::mt19937 gen(seed == 0 ? rd() : seed);
-	auto floorSize = hasFloor ? worldFloor.getSize() : Vec3{ 1000.0, 0.0, 1000.0 };
+	auto floorSize = hasFloor ? worldFloor->getSize() : Vec3{ 1000.0f, 0.0f, 1000.0f };
 
-	std::uniform_real_distribution<GLdouble> distPos(-floorSize.x * 0.5, floorSize.x * 0.5);
-	std::uniform_real_distribution<GLdouble> distSize(5.0, 30.0);
+	std::uniform_real_distribution<GLfloat> distPos(-floorSize.x * 0.5f, floorSize.x * 0.5f);
+	std::uniform_real_distribution<GLfloat> distSize(5.0f, 30.0f);
 
 	for (int i = 0; i < count; ++i)
 	{
-		GLdouble s = distSize(gen);
-		Vec3 size = { s, s * 2.0, distSize(gen) };
+		GLfloat s = distSize(gen);
+		Vec3 size = { s, s * 2.0f, distSize(gen) };
 
-		GLdouble px = distPos(gen);
-		GLdouble pz = distPos(gen);
+		GLfloat px = distPos(gen);
+		GLfloat pz = distPos(gen);
 
 		// ensure not too close to center
 		auto distCenter2 = px * px + pz * pz;
-		if (distCenter2 < 400.0) // min distance 20 units
+		if (distCenter2 < 400.0f) // min distance 20 units
 		{
-			px += (px < 0.0) ? -20.0 : 20.0;
-			pz += (pz < 0.0) ? -20.0 : 20.0;
+			px += (px < 0.0f) ? -20.0f : 20.0f;
+			pz += (pz < 0.0f) ? -20.0f : 20.0f;
 		}
 
-		Vec3 pos = { px, size.y * 0.5, pz };
+		Vec3 pos = { px, size.y * 0.5f, pz };
 		obstacles.emplace_back(pos, size);
 		obstacles.back().enableCollision();
 	}

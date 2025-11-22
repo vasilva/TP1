@@ -25,11 +25,11 @@ static Camera* sFixedCamera = nullptr;
 static Camera* sSideCamera = nullptr;
 
 // Camera parameters
-static const GLdouble CAMERA_MIN_DISTANCE = 5.0;
-static const GLdouble CAMERA_MAX_DISTANCE = 150.0;
-static const GLdouble CAMERA_SMOOTH_SPEED = 6.0;
-static const GLdouble CAMERA_ZOOM_STEP = 1.5;
-static GLdouble sCameraDistance = 40.0;
+static const GLfloat CAMERA_MIN_DISTANCE = 5.0f;
+static const GLfloat CAMERA_MAX_DISTANCE = 150.0f;
+static const GLfloat CAMERA_SMOOTH_SPEED = 6.0f;
+static const GLfloat CAMERA_ZOOM_STEP = 1.5f;
+static GLfloat sCameraDistance = 40.0f;
 
 // Camera types
 enum CameraType { FOLLOW_CAMERA = 1, FIXED_CAMERA, SIDE_CAMERA };
@@ -44,14 +44,15 @@ static std::vector<Obstacle>* sWalls = nullptr;
 static ObstacleManager* sObstacleManager = nullptr;
 
 // Time tracking
-static GLdouble sLastTime = 0.0;
+static GLfloat sLastTime = 0.0f;
 static bool sFullscreen = true;
 static bool sPaused = false;
 static std::vector<std::string> sHUDLines = prepareHUDLines();
 
 // Fog control
 static bool sFogEnabled = true;
-static const GLfloat sFogColor[4] = { 0.0f, 1.0f, 1.0f, 1.0f }; // Cyan
+const Vec3 colorFog = Color::Cyan;
+static const GLfloat sFogColor[4] = { colorFog.x, colorFog.y, colorFog.z, 1.0f };
 static GLfloat sFogDensity = 0.005f;
 
 /* GLUT callback Handlers */
@@ -64,8 +65,8 @@ void enableFog()
 	glFogi(GL_FOG_MODE, GL_EXP);
 
 	// Start/End based on camera distance
-	GLfloat fogStart = static_cast<GLfloat>(std::max(10.0, sCameraDistance * 0.5));
-	GLfloat fogEnd = static_cast<GLfloat>(std::max(60.0, sCameraDistance * 3.0));
+	GLfloat fogStart = std::max(10.0f, sCameraDistance * 0.5f);
+	GLfloat fogEnd = std::max(60.0f, sCameraDistance * 3.0f);
 	glFogf(GL_FOG_START, fogStart);
 	glFogf(GL_FOG_END, fogEnd);
 
@@ -74,16 +75,16 @@ void enableFog()
 	glHint(GL_FOG_HINT, GL_NICEST);
 }
 
-void disableFog() { glDisable(GL_FOG); }
+inline void disableFog() { glDisable(GL_FOG); }
 
 // Display callback: render the scene
 static void display(void)
 {
 	// Calculate delta time
-	const GLdouble time = glutGet(GLUT_ELAPSED_TIME) / 1000.0;
-	GLdouble dt;
-	if (sLastTime <= 0.0)
-		dt = 1.0 / 60.0;
+	const GLfloat time = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+	GLfloat dt;
+	if (sLastTime <= 0.0f)
+		dt = 1.0f / 60.0f;
 	else
 		dt = time - sLastTime;
 
@@ -113,7 +114,7 @@ static void display(void)
 	Vec3 flockCenter = sFlock ? sFlock->getAvgPosition() : cbPos;
 	Vec3 desiredPos, desiredTarget, currPos, currTarget, smoothPos, smoothTarget;
 	Vec3 offset, forwardDir, rightCamPos, right;
-	GLdouble yawRad = 0.0, height, t;
+	GLfloat yawRad = 0.0f, height, t;
 
 	// Camera behavior based on current camera type
 	switch (sCurrentCamera)
@@ -122,10 +123,10 @@ static void display(void)
 		if (sFollowCamera && sControlledBoid)
 		{
 			// Desired camera position and target
-			yawRad = sControlledBoid->getYaw() * (PI / 180.0);
+			yawRad = sControlledBoid->getYaw() * (PI / 180.0f);
 			offset = {
 				-sin(yawRad) * sCameraDistance,
-				sCameraDistance * 0.2,
+				sCameraDistance * 0.2f,
 				-cos(yawRad) * sCameraDistance
 			};
 			desiredPos = cbPos + offset;
@@ -136,9 +137,9 @@ static void display(void)
 			currTarget = sFollowCamera->getTarget();
 
 			// Smoothing factor
-			t = 1.0 - std::exp(-CAMERA_SMOOTH_SPEED * dt);
-			if (t < 0.0) t = 0.0;
-			if (t > 1.0) t = 1.0;
+			t = 1.0f - std::exp(-CAMERA_SMOOTH_SPEED * dt);
+			if (t < 0.0f) t = 0.0f;
+			if (t > 1.0f) t = 1.0f;
 
 			// Interpolate position and target
 			smoothPos = lerp(currPos, desiredPos, t);
@@ -155,8 +156,8 @@ static void display(void)
 		if (sFixedCamera)
 		{
 			// Fixed Camera position and target
-			height = towerSize.y + sCameraDistance * 0.5;
-			sFixedCamera->setPosition(Vec3(towerPos.x, height, towerPos.z));
+			height = towerSize.y + sCameraDistance * 0.5f;
+			sFixedCamera->setPosition(towerPos.x, height, towerPos.z);
 			sFixedCamera->setTarget(flockCenter);
 			sFixedCamera->applyView();
 		}
@@ -166,11 +167,11 @@ static void display(void)
 		if (sControlledBoid && sSideCamera)
 		{
 			// Side Camera position and target
-			yawRad = sControlledBoid->getYaw() * (PI / 180.0);
-			forwardDir = { std::sin(yawRad), 0.0, std::cos(yawRad) };
+			yawRad = sControlledBoid->getYaw() * (PI / 180.0f);
+			forwardDir = { std::sin(yawRad), 0.0f, std::cos(yawRad) };
 			right = crossProduct(forwardDir, UnitY);
 			normalize(right);
-			desiredPos = cbPos + right * sCameraDistance + UnitY * sCameraDistance / 5.0;
+			desiredPos = cbPos + right * sCameraDistance + UnitY * sCameraDistance / 5.0f;
 			desiredTarget = cbPos - forwardDir;
 
 			// Current camera position and target
@@ -178,9 +179,9 @@ static void display(void)
 			currTarget = sSideCamera->getTarget();
 
 			// Smoothing factor
-			t = 1.0 - std::exp(-CAMERA_SMOOTH_SPEED * dt);
-			if (t < 0.0) t = 0.0;
-			if (t > 1.0) t = 1.0;
+			t = 1.0f - std::exp(-CAMERA_SMOOTH_SPEED * dt);
+			if (t < 0.0f) t = 0.0f;
+			if (t > 1.0f) t = 1.0f;
 
 			// Interpolate position and target
 			smoothPos = lerp(currPos, desiredPos, t);
@@ -247,19 +248,19 @@ static void reshape(int w, int h)
 // Keyboard callback: handle WASDQE keys for controlled boid
 static void keyboardControl(unsigned char key, int x, int y)
 {
-	const GLdouble rotateAmount = 5.0;	// degrees per key press
-	const GLdouble heightStep = 0.5;	// height change per key press
-	const GLdouble minHeight = 2.0;		// minimum height
-	const GLdouble maxHeight = 50.0;	// maximum height
+	const GLfloat rotateAmount = 5.0f;	// degrees per key press
+	const GLfloat heightStep = 0.5f;	// height change per key press
+	const GLfloat minHeight = 2.0f;		// minimum height
+	const GLfloat maxHeight = 50.0f;	// maximum height
 	if (!sControlledBoid) return;		// No controlled boid available
 
 	switch (key)
 	{
 		// Movement controls
 	case 'w': case 'W': // Accelerate forward
-		sControlledBoid->moveForward(1.0); break;
+		sControlledBoid->moveForward(1.0f); break;
 	case 's': case 'S': // Decelerate / move backward
-		sControlledBoid->moveBackward(1.0); break;
+		sControlledBoid->moveBackward(1.0f); break;
 	case 'a': case 'A': // Turn left
 		sControlledBoid->rotateYaw(rotateAmount); break;
 	case 'd': case 'D': // Turn right
@@ -267,7 +268,7 @@ static void keyboardControl(unsigned char key, int x, int y)
 
 	case 'q': case 'Q': // Increase height
 	{
-		GLdouble incHeight = sControlledBoid->getHeight() + heightStep;
+		GLfloat incHeight = sControlledBoid->getHeight() + heightStep;
 		if (incHeight > maxHeight) incHeight = maxHeight;
 		sControlledBoid->setHeight(incHeight);
 	}
@@ -275,7 +276,7 @@ static void keyboardControl(unsigned char key, int x, int y)
 
 	case 'e': case 'E': // Decrease height
 	{
-		GLdouble decHeight = sControlledBoid->getHeight() - heightStep;
+		GLfloat decHeight = sControlledBoid->getHeight() - heightStep;
 		if (decHeight < minHeight) decHeight = minHeight;
 		sControlledBoid->setHeight(decHeight);
 	}
@@ -342,7 +343,7 @@ static void keyboardControl(unsigned char key, int x, int y)
 // Special keys callback: handle arrow keys for controlled boid
 static void cameraSpecial(int key, int x, int y)
 {
-	const double rotateAmount = 5.0; // degrees per key press
+	const GLfloat rotateAmount = 5.0f; // degrees per key press
 	if (!sControlledBoid) return;
 
 	switch (key)
@@ -352,9 +353,9 @@ static void cameraSpecial(int key, int x, int y)
 	case GLUT_KEY_RIGHT:	// Turn right
 		sControlledBoid->rotateYaw(-rotateAmount); break;
 	case GLUT_KEY_UP:		// Accelerate forward
-		sControlledBoid->moveForward(1.0); break;
+		sControlledBoid->moveForward(1.0f); break;
 	case GLUT_KEY_DOWN:		// Decelerate / move backward
-		sControlledBoid->moveBackward(1.0); break;
+		sControlledBoid->moveBackward(1.0f); break;
 
 	default: break;
 	}
@@ -384,7 +385,7 @@ static void mouseFunc(int button, int state, int x, int y)
 }
 
 // Idle callback: simply request redisplay
-static void idle(void) { glutPostRedisplay(); }
+static inline void idle(void) { glutPostRedisplay(); }
 
 // Function to register world objects for GLUT callbacks
 void registerWorldObjects(

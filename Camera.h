@@ -15,26 +15,26 @@ public:
 	void applyView() const;
 
 	// Movement methods
-	void moveForward(GLdouble distance);
-	void moveBackward(GLdouble distance);
-	void moveUp(GLdouble distance);
-	void moveDown(GLdouble distance);
+	void moveForward(GLfloat distance);
+	void moveBackward(GLfloat distance);
+	void moveUp(GLfloat distance);
+	void moveDown(GLfloat distance);
 
 	// Rotation method for yaw and pitch
-	void rotate(GLdouble yawDeg, GLdouble pitchDeg);
+	void rotate(GLfloat yawDeg, GLfloat pitchDeg);
 
 	// Zoom methods
-	void zoomIn(GLdouble amount);
-	void zoomOut(GLdouble amount);
+	void zoomIn(GLfloat amount);
+	void zoomOut(GLfloat amount);
 
 	// Setters
-	void setPosition(GLdouble x, GLdouble y, GLdouble z);
+	void setPosition(GLfloat x, GLfloat y, GLfloat z);
 	void setPosition(Vec3 v);
 
-	void setTarget(GLdouble x, GLdouble y, GLdouble z);
+	void setTarget(GLfloat x, GLfloat y, GLfloat z);
 	void setTarget(Vec3 t);
 
-	void setUp(GLdouble x, GLdouble y, GLdouble z);
+	void setUp(GLfloat x, GLfloat y, GLfloat z);
 	void setUp(Vec3 u);
 
 	// Getters
@@ -46,15 +46,15 @@ private:
 	Vec3 position;				// Camera position
 	Vec3 target;				// Camera target point
 	Vec3 up;					// Up vector
-	GLdouble distanceToTarget;	// Distance from position to target
+	GLfloat distanceToTarget;	// Distance from position to target
 
 	// Angular orientation
-	GLdouble yawAngle;	 // Rotation around Y-axis
-	GLdouble pitchAngle; // Rotation around X-axis
+	GLfloat yawAngle;	 // Rotation around Y-axis
+	GLfloat pitchAngle; // Rotation around X-axis
 
 	// Zoom level
-	GLdouble minDistance;
-	GLdouble maxDistance;
+	GLfloat minDistance;
+	GLfloat maxDistance;
 
 	// Helper method to update target based on current angles and distance
 	void updateTargetFromAngles();

@@ -11,10 +11,11 @@ public:
 	ObstacleManager() = default;
 	~ObstacleManager() = default;
 
-	void setFloor(const Floor& floor);
+	// Set the reference floor for obstacle placement
+	void setFloor(Floor* floor) { worldFloor = floor, hasFloor = (floor != nullptr); }
 
 	// Add a single obstacle
-	void addObstacle(); 
+	void addObstacle();
 
 	// Remove the most recently added obstacle
 	void removeObstacle();
@@ -23,12 +24,9 @@ public:
 	void reset();
 
 	// Generate obstacles randomly placed on the floor
-	void generateRandom(const Floor& floor, int count = 100, unsigned int seed = 0);
+	void generateRandom(int count, unsigned int seed = 0);
 
-	// Access underlying vector for compatibility with existing code
 	std::vector<Obstacle>& getObstacles() { return obstacles; }
-
-	// Convenience
 	size_t size() const { return obstacles.size(); }
 
 private:
@@ -36,6 +34,6 @@ private:
 	int minObstacleCount = 10;		 // Minimum number of obstacles
 	int maxObstacleCount = 200;		 // Maximum number of obstacles
 
-	Floor worldFloor;		// Reference floor for obstacle placement
-	bool hasFloor = false;	// Flag indicating if floor is set
+	Floor* worldFloor = nullptr;	 // Reference floor for obstacle placement
+	bool hasFloor = false;			 // Flag indicating if floor is set
 };

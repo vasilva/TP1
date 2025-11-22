@@ -5,70 +5,66 @@
 #include "vecFunctions.h"
 
 ControlledBoid::ControlledBoid()
-	: yaw(0.0), speed(0.0),
-	maxSpeed(30.0), acceleration(4.0),
-	height(10.0), targetHeight(10.0),
-	heightSmoothFactor(10.0)
+	: speed(0.0f), acceleration(4.0f),
+	height(10.0f), targetHeight(10.0f),
+	heightSmoothFactor(10.0f)
 {
 	setVelocity(Zero);
-	setSize(1.0, 1.0, 1.0);
+	setMaxSpeed(30.0f);
 	setColors(Color::LightBlue, Color::LightGreen, Color::Cyan);
 	disableCollision();
 }
 
-void ControlledBoid::rotateYaw(GLdouble angle)
+void ControlledBoid::rotateYaw(GLfloat angle)
 {
+	auto yaw = getYaw();
 	yaw += angle;
-	if (yaw >= 360.0) yaw -= 360.0;
-	if (yaw < -360.0) yaw += 360.0;
+	if (yaw >= 360.0f) yaw -= 360.0f;
+	if (yaw < -360.0f) yaw += 360.0f;
+	setYaw(yaw);
 }
 
-void ControlledBoid::moveForward(GLdouble amount)
+void ControlledBoid::moveForward(GLfloat amount)
 {
-	GLdouble newSpeed = speed + acceleration * amount;
-	speed = std::min(newSpeed, maxSpeed);
+	GLfloat newSpeed = speed + acceleration * amount;
+	speed = std::min(newSpeed, getMaxSpeed());
 }
 
-void ControlledBoid::moveBackward(GLdouble amount)
+void ControlledBoid::moveBackward(GLfloat amount)
 {
-	GLdouble newSpeed = speed - acceleration * amount;
-	speed = std::max(newSpeed, -maxSpeed);
+	GLfloat newSpeed = speed - acceleration * amount;
+	speed = std::max(newSpeed, -getMaxSpeed());
 }
 
 void ControlledBoid::stop()
 {
-	speed = 0.0;
-	setVelocity(0.0, 0.0, 0.0);
+	speed = 0.0f;
+	setVelocity(Zero);
 }
 
-void ControlledBoid::setHeight(GLdouble h)
-{
-	targetHeight = h;
-}
-
-void ControlledBoid::update(GLdouble deltaTime)
+void ControlledBoid::update(GLfloat deltaTime)
 {
 	// Update height towards target height
-	if (deltaTime > 0.0)
+	if (deltaTime > 0.0f)
 	{
 		// Smooth height adjustment
-		GLdouble alpha = 1.0 - std::exp(-heightSmoothFactor * deltaTime);
+		GLfloat alpha = 1.0f - std::exp(-heightSmoothFactor * deltaTime);
 		height += (targetHeight - height) * alpha;
 	}
 
 	// Update velocity based on facing direction and speed
-	GLdouble yawRad = yaw * (PI / 180.0);
-	Vec3 forwardDir = { std::sin(yawRad), 0.0, std::cos(yawRad) };
+	GLfloat yawRad = getYaw() * (PI / 180.0f);
+	Vec3 forwardDir = { std::sin(yawRad), 0.0f, std::cos(yawRad) };
 	Vec3 newVelocity = forwardDir * speed;
 	setVelocity(newVelocity);
 
 	// Calculate speed factor for wing animation
-	GLdouble speedLength = length(newVelocity);
-	GLdouble speedFactor = 0.0;
-	if (maxSpeed > 1e-6) speedFactor = std::min(1.0, speedLength / maxSpeed);
+	GLfloat speedLength = length(newVelocity);
+	GLfloat speedFactor = 0.0f;
+	if (getMaxSpeed() > 1e-6f) speedFactor = std::min(1.0f, speedLength / getMaxSpeed());
 
 	// Wing animation update
-	GLdouble flapRate = getWingBaseRate() * (0.5 + 1.5 * speedFactor);
+	GLfloat flapRate = getWingBaseRate() * (0.5f + 1.5f * speedFactor);
 	setWingAngle(getWingAngle() + flapRate * deltaTime);
 
 	// Update position based on velocity

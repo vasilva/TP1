@@ -64,14 +64,25 @@ void enableFog()
 	glFogfv(GL_FOG_COLOR, sFogColor);
 	glFogi(GL_FOG_MODE, GL_EXP);
 
-	// Start/End based on camera distance
-	GLfloat fogStart = std::max(10.0f, sCameraDistance * 0.5f);
-	GLfloat fogEnd = std::max(60.0f, sCameraDistance * 3.0f);
+	// Adjust fog density based on camera distance
+	const GLfloat refernceDistance = 40.0f;
+	GLfloat scale = sCameraDistance / refernceDistance;
+	scale = std::clamp(scale, 0.4f, 3.0f);
+	GLfloat density = sFogDensity * (scale * scale);
+
+	// Clamp density to reasonable range
+	const GLfloat minDensity = 0.0005f;
+	const GLfloat maxDensity = 0.1f;
+	if (density < minDensity) density = minDensity;
+	if (density > maxDensity) density = maxDensity;
+
+	glFogf(GL_FOG_DENSITY, density);
+	
+	// Set fog start and end distances
+	GLfloat fogStart = std::max(5.0f, sCameraDistance * 0.15f);
+	GLfloat fogEnd = std::max(30.0f, sCameraDistance * 2.5f);
 	glFogf(GL_FOG_START, fogStart);
 	glFogf(GL_FOG_END, fogEnd);
-
-	// Density and quality
-	glFogf(GL_FOG_DENSITY, sFogDensity);
 	glHint(GL_FOG_HINT, GL_NICEST);
 }
 
@@ -268,17 +279,17 @@ static void keyboardControl(unsigned char key, int x, int y)
 
 	case 'q': case 'Q': // Increase height
 	{
-		GLfloat incHeight = sControlledBoid->getHeight() + heightStep;
-		if (incHeight > maxHeight) incHeight = maxHeight;
-		sControlledBoid->setHeight(incHeight);
+		const GLfloat current = sControlledBoid->getHeight();
+		const GLfloat next = std::min(maxHeight, current + heightStep);
+		sControlledBoid->setHeight(next);
 	}
 	break;
 
 	case 'e': case 'E': // Decrease height
 	{
-		GLfloat decHeight = sControlledBoid->getHeight() - heightStep;
-		if (decHeight < minHeight) decHeight = minHeight;
-		sControlledBoid->setHeight(decHeight);
+		const GLfloat current = sControlledBoid->getHeight();
+		const GLfloat next = std::max(minHeight, current - heightStep);
+		sControlledBoid->setHeight(next);
 	}
 	break;
 

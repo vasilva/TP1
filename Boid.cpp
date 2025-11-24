@@ -311,6 +311,7 @@ void Boid::drawShadow()
 	// Attributes for shadow
 	glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glDisable(GL_LIGHTING);
+	glDisable(GL_FOG);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glDepthMask(GL_FALSE);
@@ -356,6 +357,7 @@ void Boid::drawBody()
 	// Draw wireframe overlay
 	glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT);
 	glDisable(GL_LIGHTING);
+	glDisable(GL_FOG);
 	glColor3f(wireColor.x, wireColor.y, wireColor.z);
 
 	// Wire nose

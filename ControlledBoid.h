@@ -13,7 +13,7 @@ public:
 	void stop();						// Stop movement
 
 	// Height control
-	void setHeight(GLfloat h) { height = h; }
+	void setHeight(GLfloat h) { targetHeight = h; }
 	GLfloat getHeight() const { return height; }
 
 	// Override update to include control

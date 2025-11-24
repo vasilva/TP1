@@ -61,7 +61,10 @@ void Floor::draw()
 	glDisable(GL_POLYGON_OFFSET_FILL);
 
 	// Draw grid lines (no lighting for crisp lines)
-	if (lightingEnabled) glDisable(GL_LIGHTING);
+	if (lightingEnabled) 
+	{
+		glDisable(GL_LIGHTING);
+	}
 
 	glLineWidth(1.0f);
 	glColor3f(wireColor.x, wireColor.y, wireColor.z);
@@ -97,7 +100,8 @@ void Floor::draw()
 	glEnd();
 
 	// Restore lighting state
-	if (lightingEnabled) glEnable(GL_LIGHTING);
+	if (lightingEnabled) 
+		glEnable(GL_LIGHTING);
 
 	glPopMatrix();
 }

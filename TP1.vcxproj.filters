@@ -42,7 +42,7 @@
     <ClCompile Include="Obstacle.cpp">
       <Filter>Arquivos de Origem</Filter>
     </ClCompile>
-    <ClCompile Include="Wold.cpp">
+    <ClCompile Include="World.cpp">
       <Filter>Arquivos de Origem</Filter>
     </ClCompile>
     <ClCompile Include="HUD.cpp">

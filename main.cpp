@@ -1,4 +1,4 @@
-#include <GL\glut.h>
+#include <GL/glut.h>
 #include <vector>
 
 #include "glut_callback.h"

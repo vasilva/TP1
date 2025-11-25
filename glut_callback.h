@@ -59,30 +59,22 @@ static GLfloat sFogDensity = 0.005f;
 
 void enableFog()
 {
-	// Enable fog and set parameters
+	// Enable fog and set linear mode for a simpler, predictable fog
 	glEnable(GL_FOG);
 	glFogfv(GL_FOG_COLOR, sFogColor);
-	glFogi(GL_FOG_MODE, GL_EXP);
+	glFogi(GL_FOG_MODE, GL_LINEAR);
+		
+	// Set start and end distances for linear fog
+	const GLfloat fogStart = 10.0f;
+	const GLfloat fogEnd = 800.0f;
 
-	// Adjust fog density based on camera distance
-	const GLfloat refernceDistance = 40.0f;
-	GLfloat scale = sCameraDistance / refernceDistance;
-	scale = std::clamp(scale, 0.4f, 3.0f);
-	GLfloat density = sFogDensity * (scale * scale);
-
-	// Clamp density to reasonable range
-	const GLfloat minDensity = 0.0005f;
-	const GLfloat maxDensity = 0.1f;
-	if (density < minDensity) density = minDensity;
-	if (density > maxDensity) density = maxDensity;
-
-	glFogf(GL_FOG_DENSITY, density);
-	
-	// Set fog start and end distances
-	GLfloat fogStart = std::max(5.0f, sCameraDistance * 0.15f);
-	GLfloat fogEnd = std::max(30.0f, sCameraDistance * 2.5f);
 	glFogf(GL_FOG_START, fogStart);
 	glFogf(GL_FOG_END, fogEnd);
+
+	// Density is ignored by GL_LINEAR but keep a small value for compatibility
+	glFogf(GL_FOG_DENSITY, sFogDensity);
+
+	// Quality hint
 	glHint(GL_FOG_HINT, GL_NICEST);
 }
 
@@ -307,7 +299,7 @@ static void keyboardControl(unsigned char key, int x, int y)
 		else
 		{
 			glutPositionWindow(0, 0);
-			glutReshapeWindow(1920, 1080);
+			glutReshapeWindow(1280, 720);
 		}
 		break;
 
